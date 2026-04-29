@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Script Output</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0d0d0d;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      padding: 2rem;
+      min-height: 100vh;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid #222;
+      padding-bottom: 1rem;
+    }
+    h1 { font-size: 1rem; color: #888; letter-spacing: 0.1em; text-transform: uppercase; }
+    #timestamp { font-size: 0.75rem; color: #555; }
+    #dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #555;
+      margin-right: 6px;
+    }
+    #dot.live { background: #4caf50; }
+    #output {
+      white-space: pre-wrap;
+      line-height: 1.8;
+      font-size: 0.95rem;
+      color: #d4d4d4;
+    }
+    #empty { color: #444; font-style: italic; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><span id="dot"></span>Latest Run</h1>
+    <div id="timestamp">waiting for output...</div>
+  </header>
+  <div id="output"><span id="empty">No output yet.</span></div>
+
+  <script>
+    let lastTimestamp = "";
+
+    async function poll() {
+      try {
+        const res = await fetch("/output");
+        const data = await res.json();
+
+        if (data.text && data.timestamp !== lastTimestamp) {
+          lastTimestamp = data.timestamp;
+          document.getElementById("output").textContent = data.text;
+          const d = new Date(data.timestamp);
+          document.getElementById("timestamp").textContent =
+            "Last updated: " + d.toLocaleString();
+          document.getElementById("dot").className = "live";
+        } else if (!data.text) {
+          document.getElementById("dot").className = "";
+        } else {
+          document.getElementById("dot").className = "live";
+        }
+      } catch (e) {
+        document.getElementById("dot").className = "";
+      }
+    }
+
+    poll();
+    setInterval(poll, 5000);
+  </script>
+</body>
+</html>
