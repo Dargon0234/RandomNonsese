@@ -4,137 +4,179 @@
   <meta charset="UTF-8" />
   <title>VM Visualizer</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      background: #0d0d0d;
-      color: #e0e0e0;
-      font-family: 'Courier New', monospace;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 2rem;
-      min-height: 100vh;
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #060610; overflow: hidden; font-family: 'Courier New', monospace; }
+    #canvas-container { width: 100vw; height: 100vh; }
+    #overlay {
+      position: fixed;
+      top: 1.5rem;
+      left: 1.5rem;
+      color: #aaa;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      pointer-events: none;
     }
-    h1 { font-size: 0.85rem; color: #555; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 0.5rem; }
-    #tick { font-size: 0.75rem; color: #444; margin-bottom: 1.5rem; }
-    canvas {
-      background: #111;
-      border: 1px solid #222;
-      border-radius: 4px;
-      width: 100%;
-      max-width: 900px;
-    }
+    #tick   { color: #555; margin-bottom: 0.4rem; }
+    #arcs   { color: #888; }
+    #status { position: fixed; bottom: 1.5rem; right: 1.5rem; font-size: 0.7rem; color: #333; font-family: 'Courier New', monospace; }
     #legend {
-      margin-top: 1.5rem;
+      position: fixed;
+      bottom: 1.5rem;
+      left: 1.5rem;
       display: flex;
-      gap: 2rem;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.75rem;
-      color: #888;
-    }
-    .legend-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-    }
-    #arcs {
-      margin-top: 1rem;
-      font-size: 0.75rem;
+      gap: 1.5rem;
+      font-size: 0.7rem;
       color: #555;
-      text-align: center;
+      font-family: 'Courier New', monospace;
     }
-    #status { font-size: 0.7rem; color: #333; margin-top: 1.5rem; }
+    .l { display: flex; align-items: center; gap: 0.4rem; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; }
   </style>
 </head>
 <body>
-  <h1>Quantum Fluid — Live</h1>
-  <div id="tick">waiting for simulation...</div>
-  <canvas id="canvas" height="300"></canvas>
-  <div id="legend">
-    <div class="legend-item"><div class="legend-dot" style="background:#4fc3f7"></div>Realm I (128)</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#81c784"></div>Realm II (384)</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#ffb74d"></div>Realm III (640)</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#f06292"></div>Realm IV (896)</div>
+  <div id="canvas-container"></div>
+  <div id="overlay">
+    <div id="tick">TICK —</div>
+    <div id="arcs">waiting for simulation...</div>
   </div>
-  <div id="arcs">no active arcs</div>
-  <div id="status">polling...</div>
+  <div id="legend">
+    <div class="l"><div class="dot" style="background:#4fc3f7"></div>Realm I</div>
+    <div class="l"><div class="dot" style="background:#81c784"></div>Realm II</div>
+    <div class="l"><div class="dot" style="background:#ffb74d"></div>Realm III</div>
+    <div class="l"><div class="dot" style="background:#f06292"></div>Realm IV</div>
+  </div>
+  <div id="status">connecting...</div>
 
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script>
-    const canvas  = document.getElementById("canvas");
-    const ctx     = canvas.getContext("2d");
-    const W       = 900;
-    const H       = 300;
-    canvas.width  = W;
-    canvas.height = H;
+    // ── Scene setup ──────────────────────────────────────────────────────────
+    const scene    = new THREE.Scene();
+    scene.fog      = new THREE.FogExp2(0x060610, 0.012);
+    scene.background = new THREE.Color(0x060610);
 
-    const WELL_COLORS = { 128: "#4fc3f7", 384: "#81c784", 640: "#ffb74d", 896: "#f06292" };
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 60, 120);
+    camera.lookAt(0, 0, 0);
 
-    function draw(data) {
-      ctx.clearRect(0, 0, W, H);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    document.getElementById("canvas-container").appendChild(renderer.domElement);
 
-      const rho  = data.rho;
-      const maxR = Math.max(...rho);
+    // ── Lighting ─────────────────────────────────────────────────────────────
+    scene.add(new THREE.AmbientLight(0x111133, 2));
+    const dirLight = new THREE.DirectionalLight(0x6699ff, 3);
+    dirLight.position.set(50, 80, 50);
+    scene.add(dirLight);
+    const rimLight = new THREE.DirectionalLight(0x3344aa, 1.5);
+    rimLight.position.set(-50, 20, -80);
+    scene.add(rimLight);
 
-      // Draw well markers first (behind the curve)
-      for (const well of data.wells) {
-        const x = (well.pos / 1023) * W;
-        ctx.strokeStyle = WELL_COLORS[well.pos] || "#666";
-        ctx.globalAlpha = 0.3;
-        ctx.lineWidth   = 1;
-        ctx.setLineDash([4, 4]);
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, H);
-        ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.globalAlpha = 1;
+    // ── Liquid surface ────────────────────────────────────────────────────────
+    const SEGMENTS = 256;  // downsample 1024 → 256 for smooth performance
+    const geo = new THREE.PlaneGeometry(200, 60, SEGMENTS, 8);
+    geo.rotateX(-Math.PI / 2);
+
+    const mat = new THREE.MeshPhongMaterial({
+      color:     0x1a3a6a,
+      emissive:  0x050d1a,
+      specular:  0x4488ff,
+      shininess: 120,
+      wireframe: false,
+      side:      THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.85,
+    });
+
+    const mesh = new THREE.Mesh(geo, mat);
+    scene.add(mesh);
+
+    // Subtle wireframe overlay
+    const wireMat = new THREE.MeshBasicMaterial({ color: 0x1a2a4a, wireframe: true, transparent: true, opacity: 0.15 });
+    scene.add(new THREE.Mesh(geo, wireMat));
+
+    // ── Well markers ──────────────────────────────────────────────────────────
+    const WELL_COLORS = [0x4fc3f7, 0x81c784, 0xffb74d, 0xf06292];
+    const WELL_GRID   = [128, 384, 640, 896];
+    const wellMeshes  = [];
+
+    WELL_GRID.forEach((gridPos, i) => {
+      const x = ((gridPos / 1023) - 0.5) * 200;
+
+      // Glowing ring on the surface
+      const ringGeo = new THREE.RingGeometry(3, 4.5, 32);
+      ringGeo.rotateX(-Math.PI / 2);
+      const ringMat = new THREE.MeshBasicMaterial({ color: WELL_COLORS[i], side: THREE.DoubleSide, transparent: true, opacity: 0.7 });
+      const ring    = new THREE.Mesh(ringGeo, ringMat);
+      ring.position.set(x, 0.5, 0);
+      scene.add(ring);
+
+      // Vertical beam (grows when fluid concentrates here)
+      const beamGeo = new THREE.CylinderGeometry(0.4, 0.4, 1, 8);
+      const beamMat = new THREE.MeshBasicMaterial({ color: WELL_COLORS[i], transparent: true, opacity: 0.5 });
+      const beam    = new THREE.Mesh(beamGeo, beamMat);
+      beam.position.set(x, 0, 0);
+      scene.add(beam);
+      wellMeshes.push({ beam, ring, x });
+    });
+
+    // ── Update geometry from rho data ─────────────────────────────────────────
+    function updateSurface(rho) {
+      const pos    = geo.attributes.position;
+      const cols   = SEGMENTS + 1;
+      const rows   = 9;
+      const maxRho = Math.max(...rho);
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const idx     = r * cols + c;
+          const rhoIdx  = Math.floor((c / SEGMENTS) * (rho.length - 1));
+          const height  = (rho[rhoIdx] / maxRho) * 28;
+          // Y is index 1 in the position buffer (after rotateX it maps correctly)
+          pos.setY(idx, height);
+        }
       }
+      pos.needsUpdate = true;
+      geo.computeVertexNormals();
 
-      // Draw rho curve
-      ctx.strokeStyle = "#e0e0e0";
-      ctx.lineWidth   = 1.5;
-      ctx.globalAlpha = 0.9;
-      ctx.beginPath();
-      for (let i = 0; i < rho.length; i++) {
-        const x = (i / (rho.length - 1)) * W;
-        const y = H - (rho[i] / maxR) * (H * 0.85) - H * 0.05;
-        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-      ctx.globalAlpha = 1;
-
-      // Draw arc position dots on the curve
-      for (const arc of data.arcs) {
-        const x     = (arc.grid_pos / 1023) * W;
-        const idx   = Math.round(arc.grid_pos);
-        const rhoAt = rho[Math.min(idx, rho.length - 1)];
-        const y     = H - (rhoAt / maxR) * (H * 0.85) - H * 0.05;
-        ctx.fillStyle   = "#ffffff";
-        ctx.globalAlpha = 0.9;
-        ctx.beginPath();
-        ctx.arc(x, y, 4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-      }
+      // Update well beams based on local rho concentration
+      wellMeshes.forEach(({ beam, ring }, i) => {
+        const gridPos = WELL_GRID[i];
+        // Average rho in a window around the well
+        const w0     = Math.max(0, gridPos - 40);
+        const w1     = Math.min(rho.length - 1, gridPos + 40);
+        let   sum    = 0;
+        for (let j = w0; j <= w1; j++) sum += rho[j];
+        const local  = sum / (w1 - w0 + 1);
+        const norm   = local / (maxRho || 1);
+        const h      = 2 + norm * 40;
+        beam.scale.y = h;
+        beam.position.y = h / 2;
+        beam.material.opacity = 0.3 + norm * 0.7;
+        ring.material.opacity = 0.3 + norm * 0.5;
+      });
     }
 
+    // ── Smooth rho (moving average) ───────────────────────────────────────────
+    function smooth(rho, w) {
+      return rho.map((_, i) => {
+        let s = 0, n = 0;
+        for (let j = Math.max(0, i - w); j <= Math.min(rho.length - 1, i + w); j++) { s += rho[j]; n++; }
+        return s / n;
+      });
+    }
+
+    // ── Poll server ───────────────────────────────────────────────────────────
     async function poll() {
       try {
         const res  = await fetch("/vm");
         const data = await res.json();
-
         if (data.rho && data.rho.length > 0) {
-          draw(data);
-          document.getElementById("tick").textContent = `tick ${data.tick}`;
-          document.getElementById("arcs").textContent =
-            data.arcs.length > 0
-              ? "active: " + data.arcs.map(a => a.name).join("  ·  ")
+          updateSurface(smooth(data.rho, 6));
+          document.getElementById("tick").textContent  = `TICK ${data.tick}`;
+          document.getElementById("arcs").textContent  =
+            data.arcs && data.arcs.length > 0
+              ? data.arcs.map(a => a.name).join("  ·  ")
               : "no active arcs";
           document.getElementById("status").textContent = "live";
         }
@@ -145,6 +187,24 @@
 
     poll();
     setInterval(poll, 1000);
+
+    // ── Slow camera orbit ─────────────────────────────────────────────────────
+    let angle = 0;
+    function animate() {
+      requestAnimationFrame(animate);
+      angle += 0.002;
+      camera.position.x = Math.sin(angle) * 30;
+      camera.position.z = 100 + Math.cos(angle) * 30;
+      camera.lookAt(0, 10, 0);
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
   </script>
 </body>
 </html>
