@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>VM Visualizer</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0d0d0d;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+      min-height: 100vh;
+    }
+    h1 { font-size: 0.85rem; color: #555; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 0.5rem; }
+    #tick { font-size: 0.75rem; color: #444; margin-bottom: 1.5rem; }
+    canvas {
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 4px;
+      width: 100%;
+      max-width: 900px;
+    }
+    #legend {
+      margin-top: 1.5rem;
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+      color: #888;
+    }
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    #arcs {
+      margin-top: 1rem;
+      font-size: 0.75rem;
+      color: #555;
+      text-align: center;
+    }
+    #status { font-size: 0.7rem; color: #333; margin-top: 1.5rem; }
+  </style>
+</head>
+<body>
+  <h1>Quantum Fluid — Live</h1>
+  <div id="tick">waiting for simulation...</div>
+  <canvas id="canvas" height="300"></canvas>
+  <div id="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#4fc3f7"></div>Realm I (128)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#81c784"></div>Realm II (384)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ffb74d"></div>Realm III (640)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f06292"></div>Realm IV (896)</div>
+  </div>
+  <div id="arcs">no active arcs</div>
+  <div id="status">polling...</div>
+
+  <script>
+    const canvas  = document.getElementById("canvas");
+    const ctx     = canvas.getContext("2d");
+    const W       = 900;
+    const H       = 300;
+    canvas.width  = W;
+    canvas.height = H;
+
+    const WELL_COLORS = { 128: "#4fc3f7", 384: "#81c784", 640: "#ffb74d", 896: "#f06292" };
+
+    function draw(data) {
+      ctx.clearRect(0, 0, W, H);
+
+      const rho  = data.rho;
+      const maxR = Math.max(...rho);
+
+      // Draw well markers first (behind the curve)
+      for (const well of data.wells) {
+        const x = (well.pos / 1023) * W;
+        ctx.strokeStyle = WELL_COLORS[well.pos] || "#666";
+        ctx.globalAlpha = 0.3;
+        ctx.lineWidth   = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, H);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 1;
+      }
+
+      // Draw rho curve
+      ctx.strokeStyle = "#e0e0e0";
+      ctx.lineWidth   = 1.5;
+      ctx.globalAlpha = 0.9;
+      ctx.beginPath();
+      for (let i = 0; i < rho.length; i++) {
+        const x = (i / (rho.length - 1)) * W;
+        const y = H - (rho[i] / maxR) * (H * 0.85) - H * 0.05;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      // Draw arc position dots on the curve
+      for (const arc of data.arcs) {
+        const x     = (arc.grid_pos / 1023) * W;
+        const idx   = Math.round(arc.grid_pos);
+        const rhoAt = rho[Math.min(idx, rho.length - 1)];
+        const y     = H - (rhoAt / maxR) * (H * 0.85) - H * 0.05;
+        ctx.fillStyle   = "#ffffff";
+        ctx.globalAlpha = 0.9;
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    async function poll() {
+      try {
+        const res  = await fetch("/vm");
+        const data = await res.json();
+
+        if (data.rho && data.rho.length > 0) {
+          draw(data);
+          document.getElementById("tick").textContent = `tick ${data.tick}`;
+          document.getElementById("arcs").textContent =
+            data.arcs.length > 0
+              ? "active: " + data.arcs.map(a => a.name).join("  ·  ")
+              : "no active arcs";
+          document.getElementById("status").textContent = "live";
+        }
+      } catch (e) {
+        document.getElementById("status").textContent = "waiting...";
+      }
+    }
+
+    poll();
+    setInterval(poll, 1000);
+  </script>
+</body>
+</html>
