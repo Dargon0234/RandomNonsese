@@ -1,11 +1,13 @@
+import json
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from datetime import datetime, timezone
 
 app = FastAPI()
 
-latest    = {"text": "", "timestamp": ""}
-vm_latest = {}
+latest      = {"text": "", "timestamp": ""}
+vm_latest   = {}
+tree_latest = {}
 
 
 @app.post("/output")
@@ -25,13 +27,26 @@ async def get_output():
 async def receive_vm(request: Request):
     body = await request.body()
     vm_latest.clear()
-    vm_latest.update(__import__("json").loads(body))
+    vm_latest.update(json.loads(body))
     return {"status": "ok"}
 
 
 @app.get("/vm")
 async def get_vm():
     return JSONResponse(vm_latest)
+
+
+@app.post("/tree")
+async def receive_tree(request: Request):
+    body = await request.body()
+    tree_latest.clear()
+    tree_latest.update(json.loads(body))
+    return {"status": "ok"}
+
+
+@app.get("/tree")
+async def get_tree():
+    return JSONResponse(tree_latest)
 
 
 @app.get("/", response_class=HTMLResponse)
