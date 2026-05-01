@@ -7,7 +7,8 @@ app = FastAPI()
 
 latest      = {"text": "", "timestamp": ""}
 vm_latest   = {}
-tree_latest = {}
+tree_latest  = {}
+event_latest = {}
 
 
 @app.post("/output")
@@ -47,6 +48,19 @@ async def receive_tree(request: Request):
 @app.get("/tree")
 async def get_tree():
     return JSONResponse(tree_latest)
+
+
+@app.post("/event")
+async def receive_event(request: Request):
+    body = await request.body()
+    event_latest.clear()
+    event_latest.update(json.loads(body))
+    return {"status": "ok"}
+
+
+@app.get("/event")
+async def get_event():
+    return JSONResponse(event_latest)
 
 
 @app.get("/", response_class=HTMLResponse)
