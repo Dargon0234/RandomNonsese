@@ -34,6 +34,7 @@
       transition: color 1s ease, border-color 1s ease;
     }
     #h-tick { font-size: 0.58rem; color: #161622; margin-left: auto; }
+    #h-time { font-size: 0.58rem; color: #1e1e2e; letter-spacing: 0.1em; transition: color 2s ease; }
 
     /* World canvas */
     #world-wrap {
@@ -144,6 +145,7 @@
   <header>
     <span id="h-title">entity</span>
     <span id="h-mood">waiting</span>
+    <span id="h-time">—</span>
     <span id="h-tick">tick 0000</span>
   </header>
 
@@ -356,26 +358,6 @@
       label(cx, cy + 30, 'decay', col, on);
     }
 
-    function drawWindow() {
-      const W = canvas.width, H = canvas.height;
-      const cx = W * 0.5, cy = H * 0.12;
-      const ww = W * 0.12, wh = H * 0.1;
-
-      ctx.strokeStyle = '#2e2e50';
-      ctx.lineWidth   = 1.5;
-      ctx.strokeRect(cx - ww/2, cy - wh/2, ww, wh);
-      ctx.beginPath();
-      ctx.moveTo(cx, cy - wh/2); ctx.lineTo(cx, cy + wh/2);
-      ctx.moveTo(cx - ww/2, cy); ctx.lineTo(cx + ww/2, cy);
-      ctx.stroke();
-
-      // Light spill from window
-      const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, ww * 2.2);
-      grd.addColorStop(0, '#ffffff18');
-      grd.addColorStop(1, '#ffffff00');
-      ctx.fillStyle = grd;
-      ctx.beginPath(); ctx.arc(cx, cy, ww * 1.5, 0, Math.PI*2); ctx.fill();
-    }
 
     // Helpers
     function roundRect(x, y, w, h, r) {
@@ -433,6 +415,120 @@
       ctx.arc(px, py, 2, 0, Math.PI * 2);
       ctx.fillStyle = '#ffffff60';
       ctx.fill();
+    }
+
+    // ── Day / night cycle ───────────────────────────────────────
+    const CYCLE_MS = 4 * 60 * 1000; // 4-minute full cycle
+
+    // Key moments in the cycle (t = 0 to 1)
+    const SKY_STOPS = [
+      { t: 0.00, r:255, g:120, b: 60, intensity: 0.55, label: 'dawn'    },
+      { t: 0.20, r:255, g:200, b:120, intensity: 0.90, label: 'morning' },
+      { t: 0.35, r:180, g:200, b:255, intensity: 1.00, label: 'noon'    },
+      { t: 0.55, r:255, g:140, b: 60, intensity: 0.75, label: 'dusk'    },
+      { t: 0.70, r:120, g: 60, b:140, intensity: 0.30, label: 'evening' },
+      { t: 0.85, r: 20, g: 20, b: 60, intensity: 0.05, label: 'night'   },
+      { t: 1.00, r:255, g:120, b: 60, intensity: 0.55, label: 'dawn'    },
+    ];
+
+    function getSky() {
+      const t = (Date.now() % CYCLE_MS) / CYCLE_MS;
+      let prev = SKY_STOPS[SKY_STOPS.length - 2];
+      let next = SKY_STOPS[SKY_STOPS.length - 1];
+      for (let i = 0; i < SKY_STOPS.length - 1; i++) {
+        if (t >= SKY_STOPS[i].t && t < SKY_STOPS[i+1].t) {
+          prev = SKY_STOPS[i]; next = SKY_STOPS[i+1]; break;
+        }
+      }
+      const span = next.t - prev.t || 1;
+      const f    = (t - prev.t) / span;
+      return {
+        r:         Math.round(prev.r + (next.r - prev.r) * f),
+        g:         Math.round(prev.g + (next.g - prev.g) * f),
+        b:         Math.round(prev.b + (next.b - prev.b) * f),
+        intensity: prev.intensity + (next.intensity - prev.intensity) * f,
+        t,
+        label: t < 0.20 ? 'dawn' : t < 0.35 ? 'morning' :
+               t < 0.55 ? 'noon' : t < 0.70 ? 'dusk'    :
+               t < 0.85 ? 'evening' : 'night',
+      };
+    }
+
+    function drawAmbientOverlay(sky) {
+      const W = canvas.width, H = canvas.height;
+      const night = 1 - sky.intensity;
+      if (night > 0.1) {
+        // Night darkens the room
+        ctx.fillStyle = `rgba(0,0,12,${night * 0.55})`;
+        ctx.fillRect(0, 0, W, H);
+      }
+      if (sky.intensity > 0.4 && sky.t < 0.55) {
+        // Day adds a warm tint
+        const warm = (sky.intensity - 0.4) * 0.12;
+        ctx.fillStyle = `rgba(${sky.r},${sky.g*0.7|0},${sky.b*0.3|0},${warm})`;
+        ctx.fillRect(0, 0, W, H);
+      }
+    }
+
+    function drawWindowWithSky(sky) {
+      const W  = canvas.width, H = canvas.height;
+      const cx = W * 0.5,  cy = H * 0.12;
+      const ww = W * 0.12, wh = H * 0.10;
+      const { r, g, b, intensity, t } = sky;
+
+      // Sky fill inside window
+      ctx.globalAlpha = Math.min(1, intensity * 0.5 + 0.08);
+      ctx.fillStyle   = `rgb(${r},${g},${b})`;
+      ctx.fillRect(cx - ww/2 + 1, cy - wh/2 + 1, ww - 2, wh - 2);
+      ctx.globalAlpha = 1;
+
+      // Sun or moon — arcs across the window left→right over the cycle
+      const isDay  = t < 0.70;
+      const bodyT  = isDay ? t / 0.70 : (t - 0.70) / 0.30;
+      const bodyX  = (cx - ww/2 + 4) + (ww - 8) * bodyT;
+      const arcY   = Math.sin(bodyT * Math.PI);
+      const bodyY  = (cy + wh/2 - 4) - (wh - 8) * arcY;
+
+      if (isDay) {
+        const sunAlpha = intensity;
+        const grd = ctx.createRadialGradient(bodyX, bodyY, 0, bodyX, bodyY, 12);
+        grd.addColorStop(0, `rgba(${r},${g},${b},${sunAlpha})`);
+        grd.addColorStop(1, `rgba(${r},${g},${b},0)`);
+        ctx.fillStyle = grd;
+        ctx.beginPath(); ctx.arc(bodyX, bodyY, 12, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(bodyX, bodyY, 4, 0, Math.PI*2);
+        ctx.fillStyle = `rgba(255,240,200,${sunAlpha * 0.9})`; ctx.fill();
+      } else {
+        // Moon
+        const moonA = (1 - intensity) * 0.7;
+        ctx.beginPath(); ctx.arc(bodyX, bodyY, 4, 0, Math.PI*2);
+        ctx.fillStyle = `rgba(200,210,255,${moonA})`; ctx.fill();
+
+        // Stars scattered in window
+        const starPositions = [[0.15,0.2],[0.75,0.15],[0.35,0.7],[0.85,0.55],[0.55,0.35]];
+        for (const [sx, sy] of starPositions) {
+          const stx = cx - ww/2 + ww * sx;
+          const sty = cy - wh/2 + wh * sy;
+          ctx.beginPath(); ctx.arc(stx, sty, 1, 0, Math.PI*2);
+          ctx.fillStyle = `rgba(200,210,255,${moonA * 0.8})`; ctx.fill();
+        }
+      }
+
+      // Light spill into room — color and size follows intensity
+      const spillR = ww * (1.5 + intensity * 1.5);
+      const grd = ctx.createRadialGradient(cx, cy + wh/2, 0, cx, cy + wh/2, spillR);
+      grd.addColorStop(0, `rgba(${r},${g},${b},${intensity * 0.18})`);
+      grd.addColorStop(1, `rgba(${r},${g},${b},0)`);
+      ctx.fillStyle = grd;
+      ctx.beginPath(); ctx.arc(cx, cy + wh/2, spillR, 0, Math.PI*2); ctx.fill();
+
+      // Frame
+      ctx.strokeStyle = '#2e2e50'; ctx.lineWidth = 1.5;
+      ctx.strokeRect(cx - ww/2, cy - wh/2, ww, wh);
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - wh/2); ctx.lineTo(cx, cy + wh/2);
+      ctx.moveTo(cx - ww/2, cy); ctx.lineTo(cx + ww/2, cy);
+      ctx.stroke();
     }
 
     // Thought state
@@ -517,11 +613,21 @@
       }
 
       // Draw room + furniture
+      const sky = getSky();
       drawRoom();
-      drawWindow();
+      drawAmbientOverlay(sky);
+      drawWindowWithSky(sky);
       drawBed(activeDrive);
       drawShelf(activeDrive);
       drawDecayCorner(activeDrive);
+
+      // Update time-of-day label in header
+      const timeEl = document.getElementById('h-time');
+      if (timeEl && timeEl.textContent !== sky.label) {
+        timeEl.textContent  = sky.label;
+        const sc = `rgb(${sky.r},${sky.g},${sky.b})`;
+        timeEl.style.color  = sky.intensity > 0.3 ? sc : '#2a2a44';
+      }
       drawTrail();
       drawEntity();
       stepThought();
