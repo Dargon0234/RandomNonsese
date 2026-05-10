@@ -6,7 +6,7 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      background: #080810;
+      background: #12121e;
       color: #ccc;
       font-family: 'Courier New', monospace;
       height: 100vh;
@@ -240,12 +240,12 @@
     function drawRoom() {
       const W = canvas.width, H = canvas.height;
 
-      // Floor — warm dark fill
-      ctx.fillStyle = '#0a0a12';
+      // Floor
+      ctx.fillStyle = '#16162a';
       ctx.fillRect(0, 0, W, H);
 
-      // Floor boards — faint horizontal lines
-      ctx.strokeStyle = '#0e0e1a';
+      // Floor boards
+      ctx.strokeStyle = '#1e1e32';
       ctx.lineWidth = 1;
       const rows = 10;
       for (let i = 1; i < rows; i++) {
@@ -253,19 +253,19 @@
         ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
       }
 
-      // Walls — left and right edges slightly lighter
+      // Walls — left and right
       const wallW = W * 0.045;
-      ctx.fillStyle = '#0d0d18';
+      ctx.fillStyle = '#1a1a2e';
       ctx.fillRect(0, 0, wallW, H);
       ctx.fillRect(W - wallW, 0, wallW, H);
 
       // Ceiling line
-      ctx.strokeStyle = '#141420';
+      ctx.strokeStyle = '#252540';
       ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(0, H * 0.05); ctx.lineTo(W, H * 0.05); ctx.stroke();
 
-      // Baseboard — floor line
-      ctx.strokeStyle = '#131320';
+      // Baseboard
+      ctx.strokeStyle = '#20203a';
       ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(0, H * 0.94); ctx.lineTo(W, H * 0.94); ctx.stroke();
     }
@@ -278,18 +278,18 @@
       const on  = active === 'rest';
 
       // Frame
-      ctx.fillStyle   = col + (on ? '18' : '0a');
-      ctx.strokeStyle = col + (on ? '35' : '16');
+      ctx.fillStyle   = col + (on ? '2a' : '14');
+      ctx.strokeStyle = col + (on ? '55' : '28');
       ctx.lineWidth   = 1;
       roundRect(cx - bw/2, cy - bh/2, bw, bh, 3);
 
       // Pillow
-      ctx.fillStyle   = col + (on ? '28' : '10');
-      ctx.strokeStyle = col + (on ? '40' : '18');
+      ctx.fillStyle   = col + (on ? '40' : '1e');
+      ctx.strokeStyle = col + (on ? '60' : '2a');
       roundRect(cx - bw/2 + bw*0.08, cy - bh/2 + bh*0.1, bw*0.38, bh*0.35, 2);
 
       // Blanket line
-      ctx.strokeStyle = col + (on ? '25' : '0e');
+      ctx.strokeStyle = col + (on ? '40' : '18');
       ctx.lineWidth   = 1;
       ctx.beginPath();
       ctx.moveTo(cx - bw/2, cy + bh*0.05);
@@ -309,8 +309,8 @@
       // Three shelves stacked
       for (let i = 0; i < 3; i++) {
         const y = cy - sh*3 + i * (sh + H*0.05);
-        ctx.fillStyle   = col + (on ? '1a' : '0a');
-        ctx.strokeStyle = col + (on ? '38' : '18');
+        ctx.fillStyle   = col + (on ? '2e' : '16');
+        ctx.strokeStyle = col + (on ? '55' : '28');
         ctx.lineWidth   = 1;
         roundRect(cx - sw/2, y, sw, sh, 1);
 
@@ -318,7 +318,7 @@
         const itemCount = 2 + i;
         for (let j = 0; j < itemCount; j++) {
           const ix = cx - sw/2 + sw * (0.1 + j * (0.8/(itemCount)));
-          ctx.fillStyle = col + (on ? '30' : '14');
+          ctx.fillStyle = col + (on ? '50' : '22');
           ctx.fillRect(ix, y - H*0.025, sw*0.12, H*0.025);
         }
       }
@@ -333,7 +333,7 @@
       const on  = active === 'decay';
 
       // Scattered lines — something coming apart
-      ctx.strokeStyle = col + (on ? '30' : '14');
+      ctx.strokeStyle = col + (on ? '50' : '25');
       ctx.lineWidth   = 1;
       const offsets = [
         [-18,-12,8,-4], [-8,-20,14,-8], [-22,2,4,10],
@@ -348,7 +348,7 @@
 
       // Glow underneath
       const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, 28);
-      grd.addColorStop(0, col + (on ? '1a' : '08'));
+      grd.addColorStop(0, col + (on ? '2e' : '12'));
       grd.addColorStop(1, col + '00');
       ctx.fillStyle = grd;
       ctx.beginPath(); ctx.arc(cx, cy, 28, 0, Math.PI*2); ctx.fill();
@@ -361,18 +361,17 @@
       const cx = W * 0.5, cy = H * 0.12;
       const ww = W * 0.12, wh = H * 0.1;
 
-      ctx.strokeStyle = '#161625';
+      ctx.strokeStyle = '#2e2e50';
       ctx.lineWidth   = 1.5;
       ctx.strokeRect(cx - ww/2, cy - wh/2, ww, wh);
-      // Cross pane
       ctx.beginPath();
       ctx.moveTo(cx, cy - wh/2); ctx.lineTo(cx, cy + wh/2);
       ctx.moveTo(cx - ww/2, cy); ctx.lineTo(cx + ww/2, cy);
       ctx.stroke();
 
-      // Faint light from window
-      const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, ww * 1.5);
-      grd.addColorStop(0, '#ffffff08');
+      // Light spill from window
+      const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, ww * 2.2);
+      grd.addColorStop(0, '#ffffff18');
       grd.addColorStop(1, '#ffffff00');
       ctx.fillStyle = grd;
       ctx.beginPath(); ctx.arc(cx, cy, ww * 1.5, 0, Math.PI*2); ctx.fill();
@@ -391,7 +390,7 @@
     }
 
     function label(x, y, text, col, active) {
-      ctx.fillStyle  = col + (active ? '66' : '28');
+      ctx.fillStyle  = col + (active ? '99' : '44');
       ctx.font       = "9px 'Courier New'";
       ctx.textAlign  = 'center';
       ctx.fillText(text, x, y);
