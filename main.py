@@ -9,6 +9,7 @@ latest      = {"text": "", "timestamp": ""}
 vm_latest   = {}
 tree_latest  = {}
 event_latest = {}
+npc_latest  = {}
 
 
 @app.post("/output")
@@ -61,6 +62,19 @@ async def receive_event(request: Request):
 @app.get("/event")
 async def get_event():
     return JSONResponse(event_latest)
+
+
+@app.post("/npc")
+async def receive_npc(request: Request):
+    body = await request.body()
+    npc_latest.clear()
+    npc_latest.update(json.loads(body))
+    return {"status": "ok"}
+
+
+@app.get("/npc")
+async def get_npc():
+    return JSONResponse(npc_latest)
 
 
 @app.get("/", response_class=HTMLResponse)
