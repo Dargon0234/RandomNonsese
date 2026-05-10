@@ -56,6 +56,55 @@
       min-height: 2rem;
     }
 
+    /* Ask */
+    #ask-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.45rem 1.2rem;
+      border-top: 1px solid #0f0f1c;
+      flex-shrink: 0;
+    }
+    #ask-input {
+      flex: 1;
+      background: #0d0d18;
+      border: 1px solid #1a1a2a;
+      border-radius: 3px;
+      color: #666;
+      font-family: 'Courier New', monospace;
+      font-size: 0.68rem;
+      padding: 0.3rem 0.6rem;
+      outline: none;
+      transition: border-color 0.3s ease, color 0.3s ease;
+    }
+    #ask-input:focus { border-color: #2a2a44; color: #999; }
+    #ask-btn {
+      background: none;
+      border: 1px solid #1a1a2a;
+      border-radius: 3px;
+      color: #2a2a3a;
+      font-family: 'Courier New', monospace;
+      font-size: 0.6rem;
+      padding: 0.3rem 0.7rem;
+      cursor: pointer;
+      letter-spacing: 0.1em;
+      transition: color 0.3s ease, border-color 0.3s ease;
+    }
+    #ask-btn:hover { color: #666; border-color: #333; }
+
+    #reply-bar {
+      padding: 0.4rem 1.2rem;
+      border-top: 1px solid #0a0a14;
+      font-size: 0.68rem;
+      color: #1e1e2e;
+      min-height: 1.8rem;
+      flex-shrink: 0;
+      line-height: 1.5;
+      transition: color 1s ease;
+    }
+    #reply-q  { color: #1e1e2e; margin-right: 0.5rem; }
+    #reply-a  { color: #2a2a3a; font-style: italic; }
+
     /* Drive bars */
     #drive-bar {
       display: flex;
@@ -103,6 +152,15 @@
   </div>
 
   <div id="action-bar">—</div>
+
+  <div id="ask-bar">
+    <input id="ask-input" type="text" placeholder="say something..." maxlength="120" autocomplete="off"/>
+    <button id="ask-btn">ask</button>
+  </div>
+
+  <div id="reply-bar">
+    <span id="reply-q"></span><span id="reply-a"></span>
+  </div>
 
   <div id="drive-bar">
     <div class="drive" id="d-rest">
@@ -373,6 +431,49 @@
     setDriveHighlight('explore');
     poll();
     setInterval(poll, 2000);
+
+    // ── Ask / response ──────────────────────────────────────────
+    let lastResponseTick = -1;
+
+    async function sendQuestion(q) {
+      await fetch('/ask', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({question: q}),
+      });
+      document.getElementById('reply-q').textContent = q;
+      document.getElementById('reply-a').textContent = '  ...';
+    }
+
+    async function pollResponse() {
+      try {
+        const res  = await fetch('/response');
+        const data = await res.json();
+        if (data.tick && data.tick !== lastResponseTick && data.response) {
+          lastResponseTick = data.tick;
+          const col = (COLORS[activeDrive] || '#666') + '99';
+          document.getElementById('reply-q').textContent = '"' + data.question + '"';
+          document.getElementById('reply-q').style.color = '#252535';
+          const replyA = document.getElementById('reply-a');
+          replyA.textContent = '  ' + data.response;
+          replyA.style.color = col;
+        }
+      } catch(_) {}
+    }
+
+    document.getElementById('ask-btn').addEventListener('click', () => {
+      const q = document.getElementById('ask-input').value.trim();
+      if (!q) return;
+      sendQuestion(q);
+      document.getElementById('ask-input').value = '';
+    });
+
+    document.getElementById('ask-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('ask-btn').click();
+    });
+
+    pollResponse();
+    setInterval(pollResponse, 2000);
   </script>
 </body>
 </html>

@@ -9,7 +9,9 @@ latest      = {"text": "", "timestamp": ""}
 vm_latest   = {}
 tree_latest  = {}
 event_latest = {}
-npc_latest  = {}
+npc_latest       = {}
+ask_queue        = {"question": "", "timestamp": ""}
+response_latest  = {"question": "", "response": "", "tick": 0}
 
 
 @app.post("/output")
@@ -75,6 +77,33 @@ async def receive_npc(request: Request):
 @app.get("/npc")
 async def get_npc():
     return JSONResponse(npc_latest)
+
+
+@app.post("/ask")
+async def receive_ask(request: Request):
+    body = await request.body()
+    data = json.loads(body)
+    ask_queue["question"]  = data.get("question", "")
+    ask_queue["timestamp"] = datetime.now(timezone.utc).isoformat()
+    return {"status": "ok"}
+
+
+@app.get("/ask")
+async def get_ask():
+    return JSONResponse(ask_queue)
+
+
+@app.post("/response")
+async def receive_response(request: Request):
+    body = await request.body()
+    response_latest.clear()
+    response_latest.update(json.loads(body))
+    return {"status": "ok"}
+
+
+@app.get("/response")
+async def get_response():
+    return JSONResponse(response_latest)
 
 
 @app.get("/", response_class=HTMLResponse)
