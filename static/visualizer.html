@@ -308,6 +308,61 @@
       ctx.fill();
     }
 
+    // Thought state
+    let thoughtText  = "";
+    let thoughtTick  = -1;
+    let thoughtPhase = 0;   // 0=idle 1=fadein 2=hold 3=fadeout
+    let thoughtAge   = 0;
+    let thoughtAlpha = 0;
+    const T_FADEIN  = 40;
+    const T_HOLD    = 220;
+    const T_FADEOUT = 120;
+
+    function triggerThought(text) {
+      thoughtText  = text;
+      thoughtPhase = 1;
+      thoughtAge   = 0;
+      thoughtAlpha = 0;
+    }
+
+    function stepThought() {
+      if (thoughtPhase === 0) return;
+      thoughtAge++;
+      if (thoughtPhase === 1) {
+        thoughtAlpha = thoughtAge / T_FADEIN;
+        if (thoughtAge >= T_FADEIN) { thoughtPhase = 2; thoughtAge = 0; }
+      } else if (thoughtPhase === 2) {
+        thoughtAlpha = 1.0;
+        if (thoughtAge >= T_HOLD) { thoughtPhase = 3; thoughtAge = 0; }
+      } else if (thoughtPhase === 3) {
+        thoughtAlpha = 1.0 - thoughtAge / T_FADEOUT;
+        if (thoughtAge >= T_FADEOUT) { thoughtPhase = 0; thoughtAlpha = 0; thoughtText = ""; }
+      }
+    }
+
+    function drawThought(W, H) {
+      if (!thoughtText || thoughtAlpha <= 0) return;
+      const col = COLORS[activeDrive] || '#888';
+      const y   = H * 0.12;
+
+      // Wrap text at ~55 chars
+      const words = thoughtText.split(' ');
+      const lines = [];
+      let line = '';
+      for (const w of words) {
+        if ((line + ' ' + w).trim().length > 55) { lines.push(line.trim()); line = w; }
+        else line = (line + ' ' + w).trim();
+      }
+      if (line) lines.push(line);
+
+      ctx.globalAlpha = thoughtAlpha * 0.75;
+      ctx.font        = "12px 'Courier New'";
+      ctx.textAlign   = 'center';
+      ctx.fillStyle   = col;
+      lines.forEach((l, i) => ctx.fillText(l, W / 2, y + i * 18));
+      ctx.globalAlpha = 1;
+    }
+
     let frame = 0;
 
     function animate() {
@@ -354,6 +409,8 @@
       drawZone('consume');
       drawTrail();
       drawEntity();
+      stepThought();
+      drawThought(W, H);
 
       requestAnimationFrame(animate);
     }
@@ -474,6 +531,20 @@
 
     pollResponse();
     setInterval(pollResponse, 2000);
+
+    async function pollThought() {
+      try {
+        const res  = await fetch('/thought');
+        const data = await res.json();
+        if (data.tick && data.tick !== thoughtTick && data.text) {
+          thoughtTick = data.tick;
+          triggerThought(data.text);
+        }
+      } catch(_) {}
+    }
+
+    pollThought();
+    setInterval(pollThought, 2000);
   </script>
 </body>
 </html>

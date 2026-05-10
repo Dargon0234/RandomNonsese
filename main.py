@@ -12,6 +12,7 @@ event_latest = {}
 npc_latest       = {}
 ask_queue        = {"question": "", "timestamp": ""}
 response_latest  = {"question": "", "response": "", "tick": 0}
+thought_latest   = {"text": "", "tick": 0}
 
 
 @app.post("/output")
@@ -77,6 +78,19 @@ async def receive_npc(request: Request):
 @app.get("/npc")
 async def get_npc():
     return JSONResponse(npc_latest)
+
+
+@app.post("/thought")
+async def receive_thought(request: Request):
+    body = await request.body()
+    thought_latest.clear()
+    thought_latest.update(json.loads(body))
+    return {"status": "ok"}
+
+
+@app.get("/thought")
+async def get_thought():
+    return JSONResponse(thought_latest)
 
 
 @app.post("/ask")
