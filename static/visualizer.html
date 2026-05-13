@@ -177,6 +177,10 @@
       <div class="drive-label">decay</div>
       <div class="drive-track"><div class="drive-fill" id="f-decay"   style="background:#aa4466"></div></div>
     </div>
+    <div class="drive" id="d-restore">
+      <div class="drive-label">restore</div>
+      <div class="drive-track"><div class="drive-fill" id="f-restore" style="background:#9c8fd4"></div></div>
+    </div>
     <div class="drive" id="d-consume">
       <div class="drive-label">consume</div>
       <div class="drive-track"><div class="drive-fill" id="f-consume" style="background:#81c784"></div></div>
@@ -192,6 +196,7 @@
       rest:    '#4fc3f7',
       explore: '#e8b840',
       decay:   '#aa4466',
+      restore: '#9c8fd4',
       consume: '#81c784',
     };
 
@@ -199,6 +204,7 @@
     const ZONES = {
       rest:    { nx: 0.14, ny: 0.60 },   // bed, left wall
       decay:   { nx: 0.72, ny: 0.78 },   // dark corner, floor right
+      restore: { nx: 0.25, ny: 0.28 },   // plant near window, upper left
       consume: { nx: 0.82, ny: 0.30 },   // shelf, right wall
     };
 
@@ -358,6 +364,36 @@
       label(cx, cy + 30, 'decay', col, on);
     }
 
+
+    function drawRestorePool(active) {
+      const W = canvas.width, H = canvas.height;
+      const cx = ZONES.restore.nx * W, cy = ZONES.restore.ny * H;
+      const col = COLORS.restore;
+      const on  = active === 'restore';
+
+      // Outer glow
+      const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, 32);
+      grd.addColorStop(0, col + (on ? '30' : '14'));
+      grd.addColorStop(1, col + '00');
+      ctx.fillStyle = grd;
+      ctx.beginPath(); ctx.arc(cx, cy, 32, 0, Math.PI*2); ctx.fill();
+
+      // Concentric rings — pulsing pool
+      for (let i = 3; i >= 1; i--) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, i * 7, 0, Math.PI*2);
+        ctx.strokeStyle = col + (on ? (i === 1 ? '80' : i === 2 ? '50' : '30') : (i === 1 ? '35' : '20'));
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      // Center dot
+      ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI*2);
+      ctx.fillStyle = col + (on ? 'cc' : '44');
+      ctx.fill();
+
+      label(cx, cy + 34, 'restore', col, on);
+    }
 
     // Helpers
     function roundRect(x, y, w, h, r) {
@@ -620,6 +656,7 @@
       drawBed(activeDrive);
       drawShelf(activeDrive);
       drawDecayCorner(activeDrive);
+      drawRestorePool(activeDrive);
 
       // Update time-of-day label in header
       const timeEl = document.getElementById('h-time');
@@ -639,7 +676,7 @@
 
     // ── UI helpers ──────────────────────────────────────────────────
     function setDriveHighlight(active) {
-      for (const name of ['rest', 'explore', 'decay', 'consume']) {
+      for (const name of ['rest', 'explore', 'decay', 'restore', 'consume']) {
         const label = document.querySelector(`#d-${name} .drive-label`);
         if (label) label.style.color = name === active
           ? (COLORS[name] + 'bb')
@@ -648,11 +685,13 @@
     }
 
     const MOOD_COLORS = {
-      calm:      '#1e3020',
-      driven:    '#1e2840',
-      unsettled: '#302020',
-      restless:  '#282018',
-      scattered: '#301818',
+      calm:       '#1e3020',
+      driven:     '#1e2840',
+      unsettled:  '#302020',
+      restless:   '#282018',
+      scattered:  '#301818',
+      mending:    '#201e30',
+      rebuilding: '#1e1c2e',
     };
 
     // ── Polling ─────────────────────────────────────────────────────
