@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <title>entity</title>
+  <title>entities</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -18,55 +18,62 @@
     header {
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: 0.8rem;
       padding: 0.55rem 1.2rem;
       border-bottom: 1px solid #0f0f1c;
       flex-shrink: 0;
     }
-    #h-title { font-size: 0.65rem; color: #252535; letter-spacing: 0.18em; text-transform: uppercase; }
-    #h-mood {
+    .h-chip {
       font-size: 0.58rem;
-      color: #2a2a3a;
       border: 1px solid #1a1a28;
       padding: 2px 8px;
       border-radius: 3px;
       letter-spacing: 0.1em;
       transition: color 1s ease, border-color 1s ease;
     }
-    #h-tick { font-size: 0.58rem; color: #161622; margin-left: auto; }
-    #h-time { font-size: 0.58rem; color: #1e1e2e; letter-spacing: 0.1em; transition: color 2s ease; }
+    #h-time  { font-size: 0.58rem; color: #1e1e2e; letter-spacing: 0.1em; transition: color 2s ease; margin: 0 auto; }
+    #h-tick  { font-size: 0.58rem; color: #161622; }
 
-    /* World canvas */
-    #world-wrap {
-      flex: 1;
-      position: relative;
-      min-height: 0;
-    }
+    #world-wrap { flex: 1; position: relative; min-height: 0; }
     #world { display: block; width: 100%; height: 100%; }
 
-    /* Action */
-    #action-bar {
-      padding: 0.5rem 1.2rem;
+    /* Speech between entities */
+    #speech-bar {
+      padding: 0.4rem 1.2rem;
       border-top: 1px solid #0f0f1c;
-      font-size: 0.7rem;
-      color: #2a2a3a;
-      text-align: center;
+      font-size: 0.65rem;
+      color: #1e1e2e;
+      min-height: 1.8rem;
       flex-shrink: 0;
-      letter-spacing: 0.08em;
-      transition: color 1s ease;
-      min-height: 2rem;
+      letter-spacing: 0.06em;
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
     }
+    #speech-label { color: #252535; font-size: 0.52rem; flex-shrink: 0; }
+    #speech-text  { font-style: italic; transition: color 1.5s ease; }
 
-    /* Ask */
-    #ask-bar {
+    /* Ask row — side by side */
+    #ask-row {
+      display: flex;
+      border-top: 1px solid #0f0f1c;
+      flex-shrink: 0;
+    }
+    .ask-half {
+      flex: 1;
       display: flex;
       align-items: center;
       gap: 0.5rem;
       padding: 0.45rem 1.2rem;
-      border-top: 1px solid #0f0f1c;
+      border-right: 1px solid #0f0f1c;
+    }
+    .ask-half:last-child { border-right: none; }
+    .ask-label {
+      font-size: 0.52rem;
+      letter-spacing: 0.12em;
       flex-shrink: 0;
     }
-    #ask-input {
+    .ask-input {
       flex: 1;
       background: #0d0d18;
       border: 1px solid #1a1a2a;
@@ -78,12 +85,11 @@
       outline: none;
       transition: border-color 0.3s ease, color 0.3s ease;
     }
-    #ask-input:focus { border-color: #2a2a44; color: #999; }
-    #ask-btn {
+    .ask-input:focus { border-color: #2a2a44; color: #999; }
+    .ask-btn {
       background: none;
       border: 1px solid #1a1a2a;
       border-radius: 3px;
-      color: #2a2a3a;
       font-family: 'Courier New', monospace;
       font-size: 0.6rem;
       padding: 0.3rem 0.7rem;
@@ -91,29 +97,34 @@
       letter-spacing: 0.1em;
       transition: color 0.3s ease, border-color 0.3s ease;
     }
-    #ask-btn:hover { color: #666; border-color: #333; }
+    .ask-btn:hover { color: #666; border-color: #333; }
 
-    #reply-bar {
-      padding: 0.4rem 1.2rem;
+    /* Reply row — side by side */
+    #reply-row {
+      display: flex;
       border-top: 1px solid #0a0a14;
+      flex-shrink: 0;
+    }
+    .reply-half {
+      flex: 1;
+      padding: 0.4rem 1.2rem;
       font-size: 0.68rem;
       color: #1e1e2e;
       min-height: 1.8rem;
-      flex-shrink: 0;
       line-height: 1.5;
-      transition: color 1s ease;
+      border-right: 1px solid #0a0a14;
     }
-    #reply-q  { color: #1e1e2e; margin-right: 0.5rem; }
-    #reply-a  { color: #2a2a3a; font-style: italic; }
-
+    .reply-half:last-child { border-right: none; }
+    .reply-q { color: #1e1e2e; margin-right: 0.5rem; }
+    .reply-a { font-style: italic; }
   </style>
 </head>
 <body>
 
   <header>
-    <span id="h-title">entity</span>
-    <span id="h-mood">waiting</span>
+    <span class="h-chip" id="h-chip1" style="color:#9090bb88;border-color:#9090bb33">entity 1</span>
     <span id="h-time">—</span>
+    <span class="h-chip" id="h-chip2" style="color:#70b88888;border-color:#70b88833">entity 2</span>
     <span id="h-tick">tick 0000</span>
   </header>
 
@@ -121,24 +132,40 @@
     <canvas id="world"></canvas>
   </div>
 
-  <div id="action-bar">—</div>
-
-  <div id="ask-bar">
-    <input id="ask-input" type="text" placeholder="say something..." maxlength="120" autocomplete="off"/>
-    <button id="ask-btn">ask</button>
+  <div id="speech-bar">
+    <span id="speech-label">—</span>
+    <span id="speech-text"></span>
   </div>
 
-  <div id="reply-bar">
-    <span id="reply-q"></span><span id="reply-a"></span>
+  <div id="ask-row">
+    <div class="ask-half">
+      <span class="ask-label" style="color:#9090bb66">entity 1</span>
+      <input class="ask-input" id="ask-input1" type="text" placeholder="say something..." maxlength="120" autocomplete="off"/>
+      <button class="ask-btn" id="ask-btn1" style="color:#9090bb55;border-color:#9090bb33">ask</button>
+    </div>
+    <div class="ask-half">
+      <span class="ask-label" style="color:#70b88866">entity 2</span>
+      <input class="ask-input" id="ask-input2" type="text" placeholder="say something..." maxlength="120" autocomplete="off"/>
+      <button class="ask-btn" id="ask-btn2" style="color:#70b88855;border-color:#70b88833">ask</button>
+    </div>
   </div>
 
+  <div id="reply-row">
+    <div class="reply-half">
+      <span class="reply-q" id="reply-q1"></span><span class="reply-a" id="reply-a1"></span>
+    </div>
+    <div class="reply-half">
+      <span class="reply-q" id="reply-q2"></span><span class="reply-a" id="reply-a2"></span>
+    </div>
+  </div>
 
   <script>
     const canvas = document.getElementById('world');
     const ctx    = canvas.getContext('2d');
     const wrap   = document.getElementById('world-wrap');
 
-    const ENTITY_COLOR = '#9090bb';
+    const E1_COLOR = '#9090bb';
+    const E2_COLOR = '#70b888';
 
     // Room furniture positions
     const ZONES = {
@@ -148,33 +175,36 @@
       consume: { nx: 0.82, ny: 0.30 },
     };
 
-    // Entity state
-    let ex = 0.5, ey = 0.5;
-    let tx = 0.5, ty = 0.5;
+    // Entity 1 state
+    let e1x = 0.35, e1y = 0.5,  e1tx = 0.35, e1ty = 0.5;
+    let e1wanderTX = 0.35, e1wanderTY = 0.5, e1timer = 0;
+    const trail1 = [];
 
-    const trail = [];
+    // Entity 2 state
+    let e2x = 0.65, e2y = 0.5,  e2tx = 0.65, e2ty = 0.5;
+    let e2wanderTX = 0.65, e2wanderTY = 0.5, e2timer = 0;
+    const trail2 = [];
+
     const TRAIL_MAX = 28;
     const LERP = 0.018;
 
-    let wanderTX = 0.5, wanderTY = 0.5;
-    let wanderTimer = 0;
-
-    function newWanderTarget() {
-      wanderTX = 0.28 + Math.random() * 0.44;
-      wanderTY = 0.25 + Math.random() * 0.45;
+    function newWander(entity) {
+      const x = 0.22 + Math.random() * 0.56;
+      const y = 0.22 + Math.random() * 0.50;
+      if (entity === 1) { e1wanderTX = x; e1wanderTY = y; }
+      else              { e2wanderTX = x; e2wanderTY = y; }
     }
 
-    function updateTarget() {
-      wanderTimer--;
-      if (wanderTimer <= 0) {
-        newWanderTarget();
-        wanderTimer = 90 + Math.floor(Math.random() * 90);
-      }
-      tx = wanderTX;
-      ty = wanderTY;
+    function updateTargets() {
+      e1timer--;
+      if (e1timer <= 0) { newWander(1); e1timer = 90 + Math.floor(Math.random() * 100); }
+      e1tx = e1wanderTX; e1ty = e1wanderTY;
+
+      e2timer--;
+      if (e2timer <= 0) { newWander(2); e2timer = 90 + Math.floor(Math.random() * 100); }
+      e2tx = e2wanderTX; e2ty = e2wanderTY;
     }
 
-    // Canvas resize
     function resize() {
       canvas.width  = wrap.clientWidth;
       canvas.height = wrap.clientHeight;
@@ -182,36 +212,22 @@
     new ResizeObserver(resize).observe(wrap);
     resize();
 
+    // ── Room drawing ─────────────────────────────────────────────
     function drawRoom() {
       const W = canvas.width, H = canvas.height;
-
-      // Floor
-      ctx.fillStyle = '#16162a';
-      ctx.fillRect(0, 0, W, H);
-
-      // Floor boards
-      ctx.strokeStyle = '#1e1e32';
-      ctx.lineWidth = 1;
-      const rows = 10;
-      for (let i = 1; i < rows; i++) {
-        const y = (H / rows) * i;
+      ctx.fillStyle = '#16162a'; ctx.fillRect(0, 0, W, H);
+      ctx.strokeStyle = '#1e1e32'; ctx.lineWidth = 1;
+      for (let i = 1; i < 10; i++) {
+        const y = (H / 10) * i;
         ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
       }
-
-      // Walls — left and right
       const wallW = W * 0.045;
       ctx.fillStyle = '#1a1a2e';
       ctx.fillRect(0, 0, wallW, H);
       ctx.fillRect(W - wallW, 0, wallW, H);
-
-      // Ceiling line
-      ctx.strokeStyle = '#252540';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#252540'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(0, H * 0.05); ctx.lineTo(W, H * 0.05); ctx.stroke();
-
-      // Baseboard
       ctx.strokeStyle = '#20203a';
-      ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(0, H * 0.94); ctx.lineTo(W, H * 0.94); ctx.stroke();
     }
 
@@ -219,13 +235,11 @@
       const W = canvas.width, H = canvas.height;
       const cx = ZONES.rest.nx * W, cy = ZONES.rest.ny * H;
       const bw = W * 0.11, bh = H * 0.18;
-      const col = '#4fc3f7';
-
-      ctx.fillStyle = col + '14'; ctx.strokeStyle = col + '28'; ctx.lineWidth = 1;
+      ctx.fillStyle = '#4fc3f714'; ctx.strokeStyle = '#4fc3f728'; ctx.lineWidth = 1;
       roundRect(cx - bw/2, cy - bh/2, bw, bh, 3);
-      ctx.fillStyle = col + '1e'; ctx.strokeStyle = col + '2a';
+      ctx.fillStyle = '#4fc3f71e'; ctx.strokeStyle = '#4fc3f72a';
       roundRect(cx - bw/2 + bw*0.08, cy - bh/2 + bh*0.1, bw*0.38, bh*0.35, 2);
-      ctx.strokeStyle = col + '18'; ctx.lineWidth = 1;
+      ctx.strokeStyle = '#4fc3f718'; ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(cx - bw/2, cy + bh*0.05); ctx.lineTo(cx + bw/2, cy + bh*0.05);
       ctx.stroke();
@@ -235,17 +249,14 @@
       const W = canvas.width, H = canvas.height;
       const cx = ZONES.consume.nx * W, cy = ZONES.consume.ny * H;
       const sw = W * 0.09, sh = H * 0.03;
-      const col = '#81c784';
-
       for (let i = 0; i < 3; i++) {
         const y = cy - sh*3 + i * (sh + H*0.05);
-        ctx.fillStyle = col + '16'; ctx.strokeStyle = col + '28'; ctx.lineWidth = 1;
+        ctx.fillStyle = '#81c78416'; ctx.strokeStyle = '#81c78428'; ctx.lineWidth = 1;
         roundRect(cx - sw/2, y, sw, sh, 1);
-        const itemCount = 2 + i;
-        for (let j = 0; j < itemCount; j++) {
-          const ix = cx - sw/2 + sw * (0.1 + j * (0.8 / itemCount));
-          ctx.fillStyle = col + '22';
-          ctx.fillRect(ix, y - H*0.025, sw*0.12, H*0.025);
+        const ic = 2 + i;
+        for (let j = 0; j < ic; j++) {
+          const ix = cx - sw/2 + sw * (0.1 + j * (0.8 / ic));
+          ctx.fillStyle = '#81c78422'; ctx.fillRect(ix, y - H*0.025, sw*0.12, H*0.025);
         }
       }
     }
@@ -253,37 +264,29 @@
     function drawDecayCorner() {
       const W = canvas.width, H = canvas.height;
       const cx = ZONES.decay.nx * W, cy = ZONES.decay.ny * H;
-      const col = '#aa4466';
-
-      ctx.strokeStyle = col + '25'; ctx.lineWidth = 1;
-      const offsets = [[-18,-12,8,-4],[-8,-20,14,-8],[-22,2,4,10],[-4,-16,18,2],[2,-6,-14,8],[-16,10,6,18]];
-      for (const [x1,y1,x2,y2] of offsets) {
+      ctx.strokeStyle = '#aa446625'; ctx.lineWidth = 1;
+      for (const [x1,y1,x2,y2] of [[-18,-12,8,-4],[-8,-20,14,-8],[-22,2,4,10],[-4,-16,18,2],[2,-6,-14,8],[-16,10,6,18]]) {
         ctx.beginPath(); ctx.moveTo(cx+x1, cy+y1); ctx.lineTo(cx+x2, cy+y2); ctx.stroke();
       }
       const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, 28);
-      grd.addColorStop(0, col + '12'); grd.addColorStop(1, col + '00');
-      ctx.fillStyle = grd;
-      ctx.beginPath(); ctx.arc(cx, cy, 28, 0, Math.PI*2); ctx.fill();
+      grd.addColorStop(0, '#aa446612'); grd.addColorStop(1, '#aa446600');
+      ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(cx, cy, 28, 0, Math.PI*2); ctx.fill();
     }
 
     function drawRestorePool() {
       const W = canvas.width, H = canvas.height;
       const cx = ZONES.restore.nx * W, cy = ZONES.restore.ny * H;
-      const col = '#9c8fd4';
-
       const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, 32);
-      grd.addColorStop(0, col + '14'); grd.addColorStop(1, col + '00');
-      ctx.fillStyle = grd;
-      ctx.beginPath(); ctx.arc(cx, cy, 32, 0, Math.PI*2); ctx.fill();
+      grd.addColorStop(0, '#9c8fd414'); grd.addColorStop(1, '#9c8fd400');
+      ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(cx, cy, 32, 0, Math.PI*2); ctx.fill();
       for (let i = 3; i >= 1; i--) {
         ctx.beginPath(); ctx.arc(cx, cy, i * 7, 0, Math.PI*2);
-        ctx.strokeStyle = col + (i === 1 ? '35' : '20'); ctx.lineWidth = 1; ctx.stroke();
+        ctx.strokeStyle = '#9c8fd4' + (i === 1 ? '35' : '20'); ctx.lineWidth = 1; ctx.stroke();
       }
       ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI*2);
-      ctx.fillStyle = col + '44'; ctx.fill();
+      ctx.fillStyle = '#9c8fd444'; ctx.fill();
     }
 
-    // Helpers
     function roundRect(x, y, w, h, r) {
       ctx.beginPath();
       ctx.moveTo(x+r, y);
@@ -291,60 +294,27 @@
       ctx.lineTo(x+w, y+h-r); ctx.arcTo(x+w, y+h, x+w-r, y+h, r);
       ctx.lineTo(x+r, y+h); ctx.arcTo(x, y+h, x, y+h-r, r);
       ctx.lineTo(x, y+r); ctx.arcTo(x, y, x+r, y, r);
-      ctx.closePath();
-      ctx.fill(); ctx.stroke();
+      ctx.closePath(); ctx.fill(); ctx.stroke();
     }
 
-    function label(x, y, text, col, active) {
-      ctx.fillStyle  = col + (active ? '99' : '44');
-      ctx.font       = "9px 'Courier New'";
-      ctx.textAlign  = 'center';
-      ctx.fillText(text, x, y);
-    }
-
-    function drawTrail() {
+    function drawTrail(trail, col) {
       for (let i = 0; i < trail.length; i++) {
-        const t     = trail[i];
-        const frac  = i / trail.length;
-        const alpha = Math.floor(frac * frac * 60).toString(16).padStart(2, '0');
-        ctx.beginPath();
-        ctx.arc(t.x, t.y, 1.5, 0, Math.PI * 2);
-        ctx.fillStyle = ENTITY_COLOR + alpha;
-        ctx.fill();
+        const alpha = Math.floor((i / trail.length) ** 2 * 60).toString(16).padStart(2, '0');
+        ctx.beginPath(); ctx.arc(trail[i].x, trail[i].y, 1.5, 0, Math.PI*2);
+        ctx.fillStyle = col + alpha; ctx.fill();
       }
     }
 
-    function drawEntity() {
-      const W   = canvas.width, H = canvas.height;
-      const px  = ex * W, py = ey * H;
-      const col = ENTITY_COLOR;
-
-      // Outer glow
+    function drawEntity(px, py, col) {
       const grd = ctx.createRadialGradient(px, py, 0, px, py, 24);
-      grd.addColorStop(0, col + '3a');
-      grd.addColorStop(1, col + '00');
-      ctx.fillStyle = grd;
-      ctx.beginPath();
-      ctx.arc(px, py, 24, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Core dot
-      ctx.beginPath();
-      ctx.arc(px, py, 4.5, 0, Math.PI * 2);
-      ctx.fillStyle = col;
-      ctx.fill();
-
-      // Bright center
-      ctx.beginPath();
-      ctx.arc(px, py, 2, 0, Math.PI * 2);
-      ctx.fillStyle = '#ffffff60';
-      ctx.fill();
+      grd.addColorStop(0, col + '3a'); grd.addColorStop(1, col + '00');
+      ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(px, py, 24, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(px, py, 4.5, 0, Math.PI*2); ctx.fillStyle = col; ctx.fill();
+      ctx.beginPath(); ctx.arc(px, py, 2, 0, Math.PI*2); ctx.fillStyle = '#ffffff60'; ctx.fill();
     }
 
-    // ── Day / night cycle ───────────────────────────────────────
-    const CYCLE_MS = 4 * 60 * 1000; // 4-minute full cycle
-
-    // Key moments in the cycle (t = 0 to 1)
+    // ── Day / night ──────────────────────────────────────────────
+    const CYCLE_MS = 4 * 60 * 1000;
     const SKY_STOPS = [
       { t: 0.00, r:255, g:120, b: 60, intensity: 0.55, label: 'dawn'    },
       { t: 0.20, r:255, g:200, b:120, intensity: 0.90, label: 'morning' },
@@ -357,96 +327,71 @@
 
     function getSky() {
       const t = (Date.now() % CYCLE_MS) / CYCLE_MS;
-      let prev = SKY_STOPS[SKY_STOPS.length - 2];
-      let next = SKY_STOPS[SKY_STOPS.length - 1];
+      let prev = SKY_STOPS[SKY_STOPS.length - 2], next = SKY_STOPS[SKY_STOPS.length - 1];
       for (let i = 0; i < SKY_STOPS.length - 1; i++) {
-        if (t >= SKY_STOPS[i].t && t < SKY_STOPS[i+1].t) {
-          prev = SKY_STOPS[i]; next = SKY_STOPS[i+1]; break;
-        }
+        if (t >= SKY_STOPS[i].t && t < SKY_STOPS[i+1].t) { prev = SKY_STOPS[i]; next = SKY_STOPS[i+1]; break; }
       }
-      const span = next.t - prev.t || 1;
-      const f    = (t - prev.t) / span;
+      const f = (t - prev.t) / (next.t - prev.t || 1);
       return {
-        r:         Math.round(prev.r + (next.r - prev.r) * f),
-        g:         Math.round(prev.g + (next.g - prev.g) * f),
-        b:         Math.round(prev.b + (next.b - prev.b) * f),
+        r: Math.round(prev.r + (next.r - prev.r) * f),
+        g: Math.round(prev.g + (next.g - prev.g) * f),
+        b: Math.round(prev.b + (next.b - prev.b) * f),
         intensity: prev.intensity + (next.intensity - prev.intensity) * f,
         t,
-        label: t < 0.20 ? 'dawn' : t < 0.35 ? 'morning' :
-               t < 0.55 ? 'noon' : t < 0.70 ? 'dusk'    :
-               t < 0.85 ? 'evening' : 'night',
+        label: t < 0.20 ? 'dawn' : t < 0.35 ? 'morning' : t < 0.55 ? 'noon' :
+               t < 0.70 ? 'dusk' : t < 0.85 ? 'evening' : 'night',
       };
     }
 
     function drawAmbientOverlay(sky) {
       const W = canvas.width, H = canvas.height;
       const night = 1 - sky.intensity;
-      if (night > 0.1) {
-        // Night darkens the room
-        ctx.fillStyle = `rgba(0,0,12,${night * 0.55})`;
-        ctx.fillRect(0, 0, W, H);
-      }
+      if (night > 0.1) { ctx.fillStyle = `rgba(0,0,12,${night * 0.55})`; ctx.fillRect(0,0,W,H); }
       if (sky.intensity > 0.4 && sky.t < 0.55) {
-        // Day adds a warm tint
         const warm = (sky.intensity - 0.4) * 0.12;
-        ctx.fillStyle = `rgba(${sky.r},${sky.g*0.7|0},${sky.b*0.3|0},${warm})`;
-        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = `rgba(${sky.r},${sky.g*0.7|0},${sky.b*0.3|0},${warm})`; ctx.fillRect(0,0,W,H);
       }
     }
 
     function drawWindowWithSky(sky) {
-      const W  = canvas.width, H = canvas.height;
-      const cx = W * 0.5,  cy = H * 0.12;
+      const W = canvas.width, H = canvas.height;
+      const cx = W * 0.5, cy = H * 0.12;
       const ww = W * 0.12, wh = H * 0.10;
       const { r, g, b, intensity, t } = sky;
 
-      // Sky fill inside window
       ctx.globalAlpha = Math.min(1, intensity * 0.5 + 0.08);
-      ctx.fillStyle   = `rgb(${r},${g},${b})`;
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
       ctx.fillRect(cx - ww/2 + 1, cy - wh/2 + 1, ww - 2, wh - 2);
       ctx.globalAlpha = 1;
 
-      // Sun or moon — arcs across the window left→right over the cycle
-      const isDay  = t < 0.70;
-      const bodyT  = isDay ? t / 0.70 : (t - 0.70) / 0.30;
-      const bodyX  = (cx - ww/2 + 4) + (ww - 8) * bodyT;
-      const arcY   = Math.sin(bodyT * Math.PI);
-      const bodyY  = (cy + wh/2 - 4) - (wh - 8) * arcY;
+      const isDay = t < 0.70;
+      const bodyT = isDay ? t / 0.70 : (t - 0.70) / 0.30;
+      const bodyX = (cx - ww/2 + 4) + (ww - 8) * bodyT;
+      const bodyY = (cy + wh/2 - 4) - (wh - 8) * Math.sin(bodyT * Math.PI);
 
       if (isDay) {
-        const sunAlpha = intensity;
         const grd = ctx.createRadialGradient(bodyX, bodyY, 0, bodyX, bodyY, 12);
-        grd.addColorStop(0, `rgba(${r},${g},${b},${sunAlpha})`);
+        grd.addColorStop(0, `rgba(${r},${g},${b},${intensity})`);
         grd.addColorStop(1, `rgba(${r},${g},${b},0)`);
-        ctx.fillStyle = grd;
-        ctx.beginPath(); ctx.arc(bodyX, bodyY, 12, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(bodyX, bodyY, 12, 0, Math.PI*2); ctx.fill();
         ctx.beginPath(); ctx.arc(bodyX, bodyY, 4, 0, Math.PI*2);
-        ctx.fillStyle = `rgba(255,240,200,${sunAlpha * 0.9})`; ctx.fill();
+        ctx.fillStyle = `rgba(255,240,200,${intensity * 0.9})`; ctx.fill();
       } else {
-        // Moon
         const moonA = (1 - intensity) * 0.7;
         ctx.beginPath(); ctx.arc(bodyX, bodyY, 4, 0, Math.PI*2);
         ctx.fillStyle = `rgba(200,210,255,${moonA})`; ctx.fill();
-
-        // Stars scattered in window
-        const starPositions = [[0.15,0.2],[0.75,0.15],[0.35,0.7],[0.85,0.55],[0.55,0.35]];
-        for (const [sx, sy] of starPositions) {
-          const stx = cx - ww/2 + ww * sx;
-          const sty = cy - wh/2 + wh * sy;
-          ctx.beginPath(); ctx.arc(stx, sty, 1, 0, Math.PI*2);
+        for (const [sx, sy] of [[0.15,0.2],[0.75,0.15],[0.35,0.7],[0.85,0.55],[0.55,0.35]]) {
+          ctx.beginPath(); ctx.arc(cx - ww/2 + ww*sx, cy - wh/2 + wh*sy, 1, 0, Math.PI*2);
           ctx.fillStyle = `rgba(200,210,255,${moonA * 0.8})`; ctx.fill();
         }
       }
 
-      // Light spill into room — color and size follows intensity
       const spillR = ww * (1.5 + intensity * 1.5);
       const grd = ctx.createRadialGradient(cx, cy + wh/2, 0, cx, cy + wh/2, spillR);
       grd.addColorStop(0, `rgba(${r},${g},${b},${intensity * 0.18})`);
       grd.addColorStop(1, `rgba(${r},${g},${b},0)`);
-      ctx.fillStyle = grd;
-      ctx.beginPath(); ctx.arc(cx, cy + wh/2, spillR, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(cx, cy + wh/2, spillR, 0, Math.PI*2); ctx.fill();
 
-      // Frame
       ctx.strokeStyle = '#2e2e50'; ctx.lineWidth = 1.5;
       ctx.strokeRect(cx - ww/2, cy - wh/2, ww, wh);
       ctx.beginPath();
@@ -455,197 +400,199 @@
       ctx.stroke();
     }
 
-    // Thought state
-    let thoughtText  = "";
-    let thoughtTick  = -1;
-    let thoughtPhase = 0;   // 0=idle 1=fadein 2=hold 3=fadeout
-    let thoughtAge   = 0;
-    let thoughtAlpha = 0;
-    const T_FADEIN  = 60;
-    const T_HOLD    = 1200;
-    const T_FADEOUT = 240;
+    // ── Thought system (two independent streams) ─────────────────
+    const T_FADEIN = 60, T_HOLD = 1200, T_FADEOUT = 240;
 
-    function triggerThought(text) {
-      thoughtText  = text;
-      thoughtPhase = 1;
-      thoughtAge   = 0;
-      thoughtAlpha = 0;
+    function makeTought() {
+      return { text: "", tick: -1, phase: 0, age: 0, alpha: 0 };
+    }
+    let t1 = makeTought(), t2 = makeTought();
+
+    function triggerThought(state, text, tick) {
+      state.text = text; state.tick = tick; state.phase = 1; state.age = 0; state.alpha = 0;
     }
 
-    function stepThought() {
-      if (thoughtPhase === 0) return;
-      thoughtAge++;
-      if (thoughtPhase === 1) {
-        thoughtAlpha = thoughtAge / T_FADEIN;
-        if (thoughtAge >= T_FADEIN) { thoughtPhase = 2; thoughtAge = 0; }
-      } else if (thoughtPhase === 2) {
-        thoughtAlpha = 1.0;
-        if (thoughtAge >= T_HOLD) { thoughtPhase = 3; thoughtAge = 0; }
-      } else if (thoughtPhase === 3) {
-        thoughtAlpha = 1.0 - thoughtAge / T_FADEOUT;
-        if (thoughtAge >= T_FADEOUT) { thoughtPhase = 0; thoughtAlpha = 0; thoughtText = ""; }
+    function stepThought(state) {
+      if (state.phase === 0) return;
+      state.age++;
+      if (state.phase === 1) {
+        state.alpha = state.age / T_FADEIN;
+        if (state.age >= T_FADEIN) { state.phase = 2; state.age = 0; }
+      } else if (state.phase === 2) {
+        state.alpha = 1.0;
+        if (state.age >= T_HOLD) { state.phase = 3; state.age = 0; }
+      } else if (state.phase === 3) {
+        state.alpha = 1.0 - state.age / T_FADEOUT;
+        if (state.age >= T_FADEOUT) { state.phase = 0; state.alpha = 0; state.text = ""; }
       }
     }
 
-    function drawThought(W, H) {
-      if (!thoughtText || thoughtAlpha <= 0) return;
-      const col = ENTITY_COLOR;
-      const y   = H * 0.12;
-
-      // Wrap text at ~55 chars
-      const words = thoughtText.split(' ');
-      const lines = [];
-      let line = '';
+    function drawThought(state, col, centerX, W, H) {
+      if (!state.text || state.alpha <= 0) return;
+      const words = state.text.split(' ');
+      const lines = []; let line = '';
       for (const w of words) {
-        if ((line + ' ' + w).trim().length > 55) { lines.push(line.trim()); line = w; }
+        if ((line + ' ' + w).trim().length > 38) { lines.push(line.trim()); line = w; }
         else line = (line + ' ' + w).trim();
       }
       if (line) lines.push(line);
-
-      ctx.globalAlpha = thoughtAlpha * 0.75;
-      ctx.font        = "12px 'Courier New'";
-      ctx.textAlign   = 'center';
-      ctx.fillStyle   = col;
-      lines.forEach((l, i) => ctx.fillText(l, W / 2, y + i * 18));
+      ctx.globalAlpha = state.alpha * 0.75;
+      ctx.font = "11px 'Courier New'";
+      ctx.textAlign = 'center';
+      ctx.fillStyle = col;
+      lines.forEach((l, i) => ctx.fillText(l, centerX, H * 0.10 + i * 17));
       ctx.globalAlpha = 1;
     }
 
+    // ── Animation loop ───────────────────────────────────────────
     let frame = 0;
-
     function animate() {
       frame++;
       const W = canvas.width, H = canvas.height;
 
-      updateTarget();
+      updateTargets();
+      e1x += (e1tx - e1x) * LERP; e1y += (e1ty - e1y) * LERP;
+      e2x += (e2tx - e2x) * LERP; e2y += (e2ty - e2y) * LERP;
 
-      ex += (tx - ex) * LERP;
-      ey += (ty - ey) * LERP;
-
-      // Record trail every 3 frames
       if (frame % 3 === 0) {
-        trail.push({ x: ex * W, y: ey * H });
-        if (trail.length > TRAIL_MAX) trail.shift();
+        trail1.push({ x: e1x * W, y: e1y * H }); if (trail1.length > TRAIL_MAX) trail1.shift();
+        trail2.push({ x: e2x * W, y: e2y * H }); if (trail2.length > TRAIL_MAX) trail2.shift();
       }
 
-      // Draw room + furniture
       const sky = getSky();
       drawRoom();
       drawAmbientOverlay(sky);
       drawWindowWithSky(sky);
-      drawBed();
-      drawShelf();
-      drawDecayCorner();
-      drawRestorePool();
+      drawBed(); drawShelf(); drawDecayCorner(); drawRestorePool();
 
-      // Update time-of-day label in header
       const timeEl = document.getElementById('h-time');
       if (timeEl && timeEl.textContent !== sky.label) {
-        timeEl.textContent  = sky.label;
+        timeEl.textContent = sky.label;
         const sc = `rgb(${sky.r},${sky.g},${sky.b})`;
-        timeEl.style.color  = sky.intensity > 0.3 ? sc : '#2a2a44';
+        timeEl.style.color = sky.intensity > 0.3 ? sc : '#2a2a44';
       }
-      drawTrail();
-      drawEntity();
-      stepThought();
-      drawThought(W, H);
+
+      drawTrail(trail1, E1_COLOR);
+      drawTrail(trail2, E2_COLOR);
+      drawEntity(e1x * W, e1y * H, E1_COLOR);
+      drawEntity(e2x * W, e2y * H, E2_COLOR);
+
+      stepThought(t1); stepThought(t2);
+      drawThought(t1, E1_COLOR, W * 0.28, W, H);
+      drawThought(t2, E2_COLOR, W * 0.72, W, H);
 
       requestAnimationFrame(animate);
     }
     animate();
 
-    const TOD_COLORS = {
-      dawn:    '#332820',
-      morning: '#2a2820',
-      noon:    '#1e2228',
-      dusk:    '#2e2018',
-      evening: '#201828',
-      night:   '#141420',
-    };
-
-    // ── Polling ─────────────────────────────────────────────────────
-    let lastTick = -1;
+    // ── Polling ──────────────────────────────────────────────────
+    let lastTick1 = -1, lastTick2 = -1;
 
     async function poll() {
       try {
-        const res  = await fetch('/npc');
-        const data = await res.json();
-        if (!data.tick || data.tick === lastTick) return;
-        lastTick = data.tick;
+        const [r1, r2] = await Promise.all([fetch('/npc'), fetch('/npc2')]);
+        const [d1, d2] = await Promise.all([r1.json(), r2.json()]);
 
-        const moodEl = document.getElementById('h-mood');
-        moodEl.textContent       = data.mood || '—';
-        moodEl.style.color       = ENTITY_COLOR + '99';
-        moodEl.style.borderColor = ENTITY_COLOR + '44';
-
-        document.getElementById('h-tick').textContent =
-          'tick ' + String(data.tick).padStart(4, '0');
-
-        const actionEl = document.getElementById('action-bar');
-        actionEl.textContent = data.action || '—';
-        actionEl.style.color = ENTITY_COLOR + '55';
-
-      } catch (_) {}
+        if (d1.tick && d1.tick !== lastTick1) {
+          lastTick1 = d1.tick;
+          document.getElementById('h-tick').textContent = 'tick ' + String(d1.tick).padStart(4,'0');
+        }
+      } catch(_) {}
     }
 
-    poll();
-    setInterval(poll, 2000);
+    let thoughtTick1 = -1, thoughtTick2 = -1;
+    async function pollThoughts() {
+      try {
+        const [r1, r2] = await Promise.all([fetch('/thought'), fetch('/thought2')]);
+        const [d1, d2] = await Promise.all([r1.json(), r2.json()]);
+        if (d1.tick && d1.tick !== thoughtTick1 && d1.text) { thoughtTick1 = d1.tick; triggerThought(t1, d1.text, d1.tick); }
+        if (d2.tick && d2.tick !== thoughtTick2 && d2.text) { thoughtTick2 = d2.tick; triggerThought(t2, d2.text, d2.tick); }
+      } catch(_) {}
+    }
 
-    // ── Ask / response ──────────────────────────────────────────
-    let lastResponseTick = -1;
+    let lastSpeechTick1 = -1, lastSpeechTick2 = -1;
+    async function pollSpeech() {
+      try {
+        const res  = await fetch('/speech');
+        const data = await res.json();
+        const s1 = data.from_1 || {}, s2 = data.from_2 || {};
 
-    async function sendQuestion(q) {
-      await fetch('/ask', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        const labelEl = document.getElementById('speech-label');
+        const textEl  = document.getElementById('speech-text');
+
+        if (s1.tick && s1.tick !== lastSpeechTick1 && s1.text) {
+          lastSpeechTick1 = s1.tick;
+          labelEl.textContent = '1 → 2';
+          labelEl.style.color = E1_COLOR + '88';
+          textEl.textContent  = '"' + s1.text + '"';
+          textEl.style.color  = E1_COLOR + '99';
+        } else if (s2.tick && s2.tick !== lastSpeechTick2 && s2.text) {
+          lastSpeechTick2 = s2.tick;
+          labelEl.textContent = '2 → 1';
+          labelEl.style.color = E2_COLOR + '88';
+          textEl.textContent  = '"' + s2.text + '"';
+          textEl.style.color  = E2_COLOR + '99';
+        }
+      } catch(_) {}
+    }
+
+    let lastRespTick1 = -1, lastRespTick2 = -1;
+    async function pollResponses() {
+      try {
+        const [r1, r2] = await Promise.all([fetch('/response'), fetch('/response2')]);
+        const [d1, d2] = await Promise.all([r1.json(), r2.json()]);
+        if (d1.tick && d1.tick !== lastRespTick1 && d1.response) {
+          lastRespTick1 = d1.tick;
+          document.getElementById('reply-q1').textContent = '"' + d1.question + '"';
+          document.getElementById('reply-a1').textContent = '  ' + d1.response;
+          document.getElementById('reply-a1').style.color = E1_COLOR + '99';
+        }
+        if (d2.tick && d2.tick !== lastRespTick2 && d2.response) {
+          lastRespTick2 = d2.tick;
+          document.getElementById('reply-q2').textContent = '"' + d2.question + '"';
+          document.getElementById('reply-a2').textContent = '  ' + d2.response;
+          document.getElementById('reply-a2').style.color = E2_COLOR + '99';
+        }
+      } catch(_) {}
+    }
+
+    // ── Ask ──────────────────────────────────────────────────────
+    async function sendQ(endpoint, q) {
+      await fetch(endpoint, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({question: q}),
       });
-      document.getElementById('reply-q').textContent = q;
-      document.getElementById('reply-a').textContent = '  ...';
     }
 
-    async function pollResponse() {
-      try {
-        const res  = await fetch('/response');
-        const data = await res.json();
-        if (data.tick && data.tick !== lastResponseTick && data.response) {
-          lastResponseTick = data.tick;
-          const col = ENTITY_COLOR + '99';
-          document.getElementById('reply-q').textContent = '"' + data.question + '"';
-          document.getElementById('reply-q').style.color = '#252535';
-          const replyA = document.getElementById('reply-a');
-          replyA.textContent = '  ' + data.response;
-          replyA.style.color = col;
-        }
-      } catch(_) {}
-    }
-
-    document.getElementById('ask-btn').addEventListener('click', () => {
-      const q = document.getElementById('ask-input').value.trim();
+    document.getElementById('ask-btn1').addEventListener('click', () => {
+      const q = document.getElementById('ask-input1').value.trim();
       if (!q) return;
-      sendQuestion(q);
-      document.getElementById('ask-input').value = '';
+      sendQ('/ask', q);
+      document.getElementById('reply-q1').textContent = q;
+      document.getElementById('reply-a1').textContent = '  ...';
+      document.getElementById('ask-input1').value = '';
+    });
+    document.getElementById('ask-input1').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('ask-btn1').click();
     });
 
-    document.getElementById('ask-input').addEventListener('keydown', e => {
-      if (e.key === 'Enter') document.getElementById('ask-btn').click();
+    document.getElementById('ask-btn2').addEventListener('click', () => {
+      const q = document.getElementById('ask-input2').value.trim();
+      if (!q) return;
+      sendQ('/ask2', q);
+      document.getElementById('reply-q2').textContent = q;
+      document.getElementById('reply-a2').textContent = '  ...';
+      document.getElementById('ask-input2').value = '';
+    });
+    document.getElementById('ask-input2').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('ask-btn2').click();
     });
 
-    pollResponse();
-    setInterval(pollResponse, 2000);
-
-    async function pollThought() {
-      try {
-        const res  = await fetch('/thought');
-        const data = await res.json();
-        if (data.tick && data.tick !== thoughtTick && data.text) {
-          thoughtTick = data.tick;
-          triggerThought(data.text);
-        }
-      } catch(_) {}
-    }
-
-    pollThought();
-    setInterval(pollThought, 2000);
+    // ── Start polling ────────────────────────────────────────────
+    poll();           setInterval(poll,          2000);
+    pollThoughts();   setInterval(pollThoughts,  2000);
+    pollSpeech();     setInterval(pollSpeech,    2000);
+    pollResponses();  setInterval(pollResponses, 2000);
   </script>
 </body>
 </html>
