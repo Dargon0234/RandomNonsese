@@ -106,38 +106,6 @@
     #reply-q  { color: #1e1e2e; margin-right: 0.5rem; }
     #reply-a  { color: #2a2a3a; font-style: italic; }
 
-    /* Drive bars */
-    #drive-bar {
-      display: flex;
-      border-top: 1px solid #0f0f1c;
-      flex-shrink: 0;
-    }
-    .drive {
-      flex: 1;
-      padding: 0.45rem 0.9rem 0.55rem;
-      border-right: 1px solid #0f0f1c;
-    }
-    .drive:last-child { border-right: none; }
-    .drive-label {
-      font-size: 0.52rem;
-      color: #1c1c2c;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      margin-bottom: 0.28rem;
-      transition: color 1s ease;
-    }
-    .drive-track {
-      height: 2px;
-      background: #0d0d18;
-      border-radius: 2px;
-      overflow: hidden;
-    }
-    .drive-fill {
-      height: 100%;
-      border-radius: 2px;
-      transition: width 1.2s ease;
-      width: 0%;
-    }
   </style>
 </head>
 <body>
@@ -164,77 +132,46 @@
     <span id="reply-q"></span><span id="reply-a"></span>
   </div>
 
-  <div id="drive-bar">
-    <div class="drive" id="d-rest">
-      <div class="drive-label">rest</div>
-      <div class="drive-track"><div class="drive-fill" id="f-rest"    style="background:#4fc3f7"></div></div>
-    </div>
-    <div class="drive" id="d-explore">
-      <div class="drive-label">explore</div>
-      <div class="drive-track"><div class="drive-fill" id="f-explore" style="background:#e8b840"></div></div>
-    </div>
-    <div class="drive" id="d-decay">
-      <div class="drive-label">decay</div>
-      <div class="drive-track"><div class="drive-fill" id="f-decay"   style="background:#aa4466"></div></div>
-    </div>
-    <div class="drive" id="d-restore">
-      <div class="drive-label">restore</div>
-      <div class="drive-track"><div class="drive-fill" id="f-restore" style="background:#9c8fd4"></div></div>
-    </div>
-    <div class="drive" id="d-consume">
-      <div class="drive-label">consume</div>
-      <div class="drive-track"><div class="drive-fill" id="f-consume" style="background:#81c784"></div></div>
-    </div>
-  </div>
 
   <script>
     const canvas = document.getElementById('world');
     const ctx    = canvas.getContext('2d');
     const wrap   = document.getElementById('world-wrap');
 
-    const COLORS = {
-      rest:    '#4fc3f7',
-      explore: '#e8b840',
-      decay:   '#aa4466',
-      restore: '#9c8fd4',
-      consume: '#81c784',
-    };
+    const ENTITY_COLOR = '#9090bb';
 
-    // Room layout — normalized positions for each drive's object
+    // Room furniture positions
     const ZONES = {
-      rest:    { nx: 0.14, ny: 0.60 },   // bed, left wall
-      decay:   { nx: 0.72, ny: 0.78 },   // dark corner, floor right
-      restore: { nx: 0.25, ny: 0.28 },   // plant near window, upper left
-      consume: { nx: 0.82, ny: 0.30 },   // shelf, right wall
+      rest:    { nx: 0.14, ny: 0.60 },
+      decay:   { nx: 0.72, ny: 0.78 },
+      restore: { nx: 0.25, ny: 0.28 },
+      consume: { nx: 0.82, ny: 0.30 },
     };
 
     // Entity state
     let ex = 0.5, ey = 0.5;
     let tx = 0.5, ty = 0.5;
-    let activeDrive = 'explore';
 
     const trail = [];
     const TRAIL_MAX = 28;
     const LERP = 0.018;
 
-    // Explore wander
-    let exploreTX = 0.5, exploreTY = 0.5;
-    let exploreTimer = 0;
+    let wanderTX = 0.5, wanderTY = 0.5;
+    let wanderTimer = 0;
 
-    function newExploreTarget() {
-      // Wander the open center of the room, avoiding furniture zones
-      exploreTX = 0.28 + Math.random() * 0.44;
-      exploreTY = 0.25 + Math.random() * 0.45;
+    function newWanderTarget() {
+      wanderTX = 0.28 + Math.random() * 0.44;
+      wanderTY = 0.25 + Math.random() * 0.45;
     }
 
     function updateTarget() {
-      if (activeDrive === 'explore') {
-        tx = exploreTX;
-        ty = exploreTY;
-      } else if (ZONES[activeDrive]) {
-        tx = ZONES[activeDrive].nx;
-        ty = ZONES[activeDrive].ny;
+      wanderTimer--;
+      if (wanderTimer <= 0) {
+        newWanderTarget();
+        wanderTimer = 90 + Math.floor(Math.random() * 90);
       }
+      tx = wanderTX;
+      ty = wanderTY;
     }
 
     // Canvas resize
@@ -278,121 +215,72 @@
       ctx.beginPath(); ctx.moveTo(0, H * 0.94); ctx.lineTo(W, H * 0.94); ctx.stroke();
     }
 
-    function drawBed(active) {
+    function drawBed() {
       const W = canvas.width, H = canvas.height;
       const cx = ZONES.rest.nx * W, cy = ZONES.rest.ny * H;
       const bw = W * 0.11, bh = H * 0.18;
-      const col = COLORS.rest;
-      const on  = active === 'rest';
+      const col = '#4fc3f7';
 
-      // Frame
-      ctx.fillStyle   = col + (on ? '2a' : '14');
-      ctx.strokeStyle = col + (on ? '55' : '28');
-      ctx.lineWidth   = 1;
+      ctx.fillStyle = col + '14'; ctx.strokeStyle = col + '28'; ctx.lineWidth = 1;
       roundRect(cx - bw/2, cy - bh/2, bw, bh, 3);
-
-      // Pillow
-      ctx.fillStyle   = col + (on ? '40' : '1e');
-      ctx.strokeStyle = col + (on ? '60' : '2a');
+      ctx.fillStyle = col + '1e'; ctx.strokeStyle = col + '2a';
       roundRect(cx - bw/2 + bw*0.08, cy - bh/2 + bh*0.1, bw*0.38, bh*0.35, 2);
-
-      // Blanket line
-      ctx.strokeStyle = col + (on ? '40' : '18');
-      ctx.lineWidth   = 1;
+      ctx.strokeStyle = col + '18'; ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(cx - bw/2, cy + bh*0.05);
-      ctx.lineTo(cx + bw/2, cy + bh*0.05);
+      ctx.moveTo(cx - bw/2, cy + bh*0.05); ctx.lineTo(cx + bw/2, cy + bh*0.05);
       ctx.stroke();
-
-      label(cx, cy + bh/2 + 12, 'rest', col, on);
     }
 
-    function drawShelf(active) {
+    function drawShelf() {
       const W = canvas.width, H = canvas.height;
       const cx = ZONES.consume.nx * W, cy = ZONES.consume.ny * H;
       const sw = W * 0.09, sh = H * 0.03;
-      const col = COLORS.consume;
-      const on  = active === 'consume';
+      const col = '#81c784';
 
-      // Three shelves stacked
       for (let i = 0; i < 3; i++) {
         const y = cy - sh*3 + i * (sh + H*0.05);
-        ctx.fillStyle   = col + (on ? '2e' : '16');
-        ctx.strokeStyle = col + (on ? '55' : '28');
-        ctx.lineWidth   = 1;
+        ctx.fillStyle = col + '16'; ctx.strokeStyle = col + '28'; ctx.lineWidth = 1;
         roundRect(cx - sw/2, y, sw, sh, 1);
-
-        // Items on shelf — small rectangles
         const itemCount = 2 + i;
         for (let j = 0; j < itemCount; j++) {
-          const ix = cx - sw/2 + sw * (0.1 + j * (0.8/(itemCount)));
-          ctx.fillStyle = col + (on ? '50' : '22');
+          const ix = cx - sw/2 + sw * (0.1 + j * (0.8 / itemCount));
+          ctx.fillStyle = col + '22';
           ctx.fillRect(ix, y - H*0.025, sw*0.12, H*0.025);
         }
       }
-
-      label(cx, cy + sh + 14, 'consume', col, on);
     }
 
-    function drawDecayCorner(active) {
+    function drawDecayCorner() {
       const W = canvas.width, H = canvas.height;
       const cx = ZONES.decay.nx * W, cy = ZONES.decay.ny * H;
-      const col = COLORS.decay;
-      const on  = active === 'decay';
+      const col = '#aa4466';
 
-      // Scattered lines — something coming apart
-      ctx.strokeStyle = col + (on ? '50' : '25');
-      ctx.lineWidth   = 1;
-      const offsets = [
-        [-18,-12,8,-4], [-8,-20,14,-8], [-22,2,4,10],
-        [-4,-16,18,2],  [2,-6,-14,8],   [-16,10,6,18],
-      ];
+      ctx.strokeStyle = col + '25'; ctx.lineWidth = 1;
+      const offsets = [[-18,-12,8,-4],[-8,-20,14,-8],[-22,2,4,10],[-4,-16,18,2],[2,-6,-14,8],[-16,10,6,18]];
       for (const [x1,y1,x2,y2] of offsets) {
-        ctx.beginPath();
-        ctx.moveTo(cx+x1, cy+y1);
-        ctx.lineTo(cx+x2, cy+y2);
-        ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx+x1, cy+y1); ctx.lineTo(cx+x2, cy+y2); ctx.stroke();
       }
-
-      // Glow underneath
       const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, 28);
-      grd.addColorStop(0, col + (on ? '2e' : '12'));
-      grd.addColorStop(1, col + '00');
+      grd.addColorStop(0, col + '12'); grd.addColorStop(1, col + '00');
       ctx.fillStyle = grd;
       ctx.beginPath(); ctx.arc(cx, cy, 28, 0, Math.PI*2); ctx.fill();
-
-      label(cx, cy + 30, 'decay', col, on);
     }
 
-
-    function drawRestorePool(active) {
+    function drawRestorePool() {
       const W = canvas.width, H = canvas.height;
       const cx = ZONES.restore.nx * W, cy = ZONES.restore.ny * H;
-      const col = COLORS.restore;
-      const on  = active === 'restore';
+      const col = '#9c8fd4';
 
-      // Outer glow
       const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, 32);
-      grd.addColorStop(0, col + (on ? '30' : '14'));
-      grd.addColorStop(1, col + '00');
+      grd.addColorStop(0, col + '14'); grd.addColorStop(1, col + '00');
       ctx.fillStyle = grd;
       ctx.beginPath(); ctx.arc(cx, cy, 32, 0, Math.PI*2); ctx.fill();
-
-      // Concentric rings — pulsing pool
       for (let i = 3; i >= 1; i--) {
-        ctx.beginPath();
-        ctx.arc(cx, cy, i * 7, 0, Math.PI*2);
-        ctx.strokeStyle = col + (on ? (i === 1 ? '80' : i === 2 ? '50' : '30') : (i === 1 ? '35' : '20'));
-        ctx.lineWidth = 1;
-        ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx, cy, i * 7, 0, Math.PI*2);
+        ctx.strokeStyle = col + (i === 1 ? '35' : '20'); ctx.lineWidth = 1; ctx.stroke();
       }
-
-      // Center dot
       ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI*2);
-      ctx.fillStyle = col + (on ? 'cc' : '44');
-      ctx.fill();
-
-      label(cx, cy + 34, 'restore', col, on);
+      ctx.fillStyle = col + '44'; ctx.fill();
     }
 
     // Helpers
@@ -421,7 +309,7 @@
         const alpha = Math.floor(frac * frac * 60).toString(16).padStart(2, '0');
         ctx.beginPath();
         ctx.arc(t.x, t.y, 1.5, 0, Math.PI * 2);
-        ctx.fillStyle = (COLORS[activeDrive] || '#fff') + alpha;
+        ctx.fillStyle = ENTITY_COLOR + alpha;
         ctx.fill();
       }
     }
@@ -429,7 +317,7 @@
     function drawEntity() {
       const W   = canvas.width, H = canvas.height;
       const px  = ex * W, py = ey * H;
-      const col = COLORS[activeDrive] || '#ffffff';
+      const col = ENTITY_COLOR;
 
       // Outer glow
       const grd = ctx.createRadialGradient(px, py, 0, px, py, 24);
@@ -601,7 +489,7 @@
 
     function drawThought(W, H) {
       if (!thoughtText || thoughtAlpha <= 0) return;
-      const col = COLORS[activeDrive] || '#888';
+      const col = ENTITY_COLOR;
       const y   = H * 0.12;
 
       // Wrap text at ~55 chars
@@ -628,15 +516,6 @@
       frame++;
       const W = canvas.width, H = canvas.height;
 
-      // Explore wander — pick new waypoint every ~1.5–3s at 60fps
-      if (activeDrive === 'explore') {
-        exploreTimer--;
-        if (exploreTimer <= 0) {
-          newExploreTarget();
-          exploreTimer = 90 + Math.floor(Math.random() * 90);
-        }
-      }
-
       updateTarget();
 
       ex += (tx - ex) * LERP;
@@ -653,10 +532,10 @@
       drawRoom();
       drawAmbientOverlay(sky);
       drawWindowWithSky(sky);
-      drawBed(activeDrive);
-      drawShelf(activeDrive);
-      drawDecayCorner(activeDrive);
-      drawRestorePool(activeDrive);
+      drawBed();
+      drawShelf();
+      drawDecayCorner();
+      drawRestorePool();
 
       // Update time-of-day label in header
       const timeEl = document.getElementById('h-time');
@@ -674,24 +553,13 @@
     }
     animate();
 
-    // ── UI helpers ──────────────────────────────────────────────────
-    function setDriveHighlight(active) {
-      for (const name of ['rest', 'explore', 'decay', 'restore', 'consume']) {
-        const label = document.querySelector(`#d-${name} .drive-label`);
-        if (label) label.style.color = name === active
-          ? (COLORS[name] + 'bb')
-          : '#1c1c2c';
-      }
-    }
-
-    const MOOD_COLORS = {
-      calm:       '#1e3020',
-      driven:     '#1e2840',
-      unsettled:  '#302020',
-      restless:   '#282018',
-      scattered:  '#301818',
-      mending:    '#201e30',
-      rebuilding: '#1e1c2e',
+    const TOD_COLORS = {
+      dawn:    '#332820',
+      morning: '#2a2820',
+      noon:    '#1e2228',
+      dusk:    '#2e2018',
+      evening: '#201828',
+      night:   '#141420',
     };
 
     // ── Polling ─────────────────────────────────────────────────────
@@ -704,48 +572,21 @@
         if (!data.tick || data.tick === lastTick) return;
         lastTick = data.tick;
 
-        // Drive switch
-        if (data.active && data.active !== activeDrive) {
-          activeDrive = data.active;
-          setDriveHighlight(activeDrive);
-          exploreTimer = 0; // pick new explore target immediately if switching to explore
-        }
-
-        // Header
         const moodEl = document.getElementById('h-mood');
-        moodEl.textContent    = data.mood || '—';
-        moodEl.style.color    = MOOD_COLORS[data.mood] ?
-          adjustBrightness(MOOD_COLORS[data.mood], 2.5) : '#2a2a3a';
-        moodEl.style.borderColor = MOOD_COLORS[data.mood] || '#1a1a28';
+        moodEl.textContent       = data.mood || '—';
+        moodEl.style.color       = ENTITY_COLOR + '99';
+        moodEl.style.borderColor = ENTITY_COLOR + '44';
 
         document.getElementById('h-tick').textContent =
           'tick ' + String(data.tick).padStart(4, '0');
 
-        // Action
         const actionEl = document.getElementById('action-bar');
         actionEl.textContent = data.action || '—';
-        actionEl.style.color = (COLORS[activeDrive] || '#444') + '80';
-
-        // Drive bars
-        const drives = data.drives || {};
-        for (const [name, sat] of Object.entries(drives)) {
-          const el = document.getElementById('f-' + name);
-          if (el) el.style.width = Math.round(sat * 100) + '%';
-        }
+        actionEl.style.color = ENTITY_COLOR + '55';
 
       } catch (_) {}
     }
 
-    // Lighten a hex bg color for text readability
-    function adjustBrightness(hex, factor) {
-      const r = parseInt(hex.slice(1,3), 16);
-      const g = parseInt(hex.slice(3,5), 16);
-      const b = parseInt(hex.slice(5,7), 16);
-      const clamp = v => Math.min(255, Math.round(v * factor));
-      return `rgb(${clamp(r)},${clamp(g)},${clamp(b)})`;
-    }
-
-    setDriveHighlight('explore');
     poll();
     setInterval(poll, 2000);
 
@@ -768,7 +609,7 @@
         const data = await res.json();
         if (data.tick && data.tick !== lastResponseTick && data.response) {
           lastResponseTick = data.tick;
-          const col = (COLORS[activeDrive] || '#666') + '99';
+          const col = ENTITY_COLOR + '99';
           document.getElementById('reply-q').textContent = '"' + data.question + '"';
           document.getElementById('reply-q').style.color = '#252535';
           const replyA = document.getElementById('reply-a');
