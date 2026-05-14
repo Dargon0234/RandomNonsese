@@ -37,6 +37,64 @@
     #world-wrap { flex: 1; position: relative; min-height: 0; }
     #world { display: block; width: 100%; height: 100%; }
 
+    /* Stats bars */
+    #stats-row {
+      display: flex;
+      border-top: 1px solid #0f0f1c;
+      flex-shrink: 0;
+    }
+    .stats-half {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      padding: 0.38rem 1.2rem;
+      border-right: 1px solid #0f0f1c;
+    }
+    .stats-half:last-child { border-right: none; }
+    .drive-chip {
+      font-size: 0.48rem;
+      letter-spacing: 0.12em;
+      padding: 2px 7px;
+      border: 1px solid #1a1a28;
+      border-radius: 2px;
+      flex-shrink: 0;
+      text-transform: uppercase;
+      transition: color 0.6s ease, border-color 0.6s ease;
+      color: #252535;
+    }
+    .bars-group {
+      display: flex;
+      gap: 0.5rem;
+      flex: 1;
+    }
+    .bar-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      flex: 1;
+    }
+    .bar-label {
+      font-size: 0.38rem;
+      letter-spacing: 0.07em;
+      color: #222233;
+      text-transform: uppercase;
+    }
+    .bar-track {
+      width: 100%;
+      height: 3px;
+      background: #1a1a28;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      width: 100%;
+      transition: width 1.2s ease;
+    }
+
     /* Speech between entities */
     #speech-bar {
       padding: 0.4rem 1.2rem;
@@ -132,6 +190,51 @@
     <canvas id="world"></canvas>
   </div>
 
+  <div id="stats-row">
+    <div class="stats-half">
+      <span class="drive-chip" id="drive1">—</span>
+      <div class="bars-group">
+        <div class="bar-col">
+          <span class="bar-label">vitality</span>
+          <div class="bar-track"><div class="bar-fill" id="bar-vit1" style="background:#9090bb55"></div></div>
+        </div>
+        <div class="bar-col">
+          <span class="bar-label">hunger</span>
+          <div class="bar-track"><div class="bar-fill" id="bar-hun1" style="background:#cc884455"></div></div>
+        </div>
+        <div class="bar-col">
+          <span class="bar-label">sleep</span>
+          <div class="bar-track"><div class="bar-fill" id="bar-slp1" style="background:#4466aa55"></div></div>
+        </div>
+        <div class="bar-col">
+          <span class="bar-label">resource</span>
+          <div class="bar-track"><div class="bar-fill" id="bar-res1" style="background:#aaaa4455"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="stats-half">
+      <span class="drive-chip" id="drive2">—</span>
+      <div class="bars-group">
+        <div class="bar-col">
+          <span class="bar-label">vitality</span>
+          <div class="bar-track"><div class="bar-fill" id="bar-vit2" style="background:#70b88855"></div></div>
+        </div>
+        <div class="bar-col">
+          <span class="bar-label">hunger</span>
+          <div class="bar-track"><div class="bar-fill" id="bar-hun2" style="background:#cc884455"></div></div>
+        </div>
+        <div class="bar-col">
+          <span class="bar-label">sleep</span>
+          <div class="bar-track"><div class="bar-fill" id="bar-slp2" style="background:#4466aa55"></div></div>
+        </div>
+        <div class="bar-col">
+          <span class="bar-label">resource</span>
+          <div class="bar-track"><div class="bar-fill" id="bar-res2" style="background:#aaaa4455"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="speech-bar">
     <span id="speech-label">—</span>
     <span id="speech-text"></span>
@@ -167,7 +270,15 @@
     const E1_COLOR = '#9090bb';
     const E2_COLOR = '#70b888';
 
-    // Room furniture positions
+    const DRIVE_COLORS = {
+      rest:    '#4fc3f7',
+      explore: '#44bbaa',
+      decay:   '#aa4466',
+      restore: '#9c8fd4',
+      consume: '#81c784',
+    };
+
+    // Room furniture positions (normalized)
     const ZONES = {
       rest:    { nx: 0.14, ny: 0.60 },
       decay:   { nx: 0.72, ny: 0.78 },
@@ -175,34 +286,69 @@
       consume: { nx: 0.82, ny: 0.30 },
     };
 
+    // Drive wander zones (center + radius in normalized coords)
+    const ZONE_MAP = {
+      rest:    { cx: 0.14, cy: 0.60, r: 0.10 },
+      explore: { cx: 0.50, cy: 0.50, r: 0.35 },
+      decay:   { cx: 0.72, cy: 0.78, r: 0.11 },
+      restore: { cx: 0.25, cy: 0.28, r: 0.10 },
+      consume: { cx: 0.82, cy: 0.30, r: 0.11 },
+    };
+
     // Entity 1 state
     let e1x = 0.35, e1y = 0.5,  e1tx = 0.35, e1ty = 0.5;
     let e1wanderTX = 0.35, e1wanderTY = 0.5, e1timer = 0;
+    let e1Drive = 'explore';
     const trail1 = [];
 
     // Entity 2 state
     let e2x = 0.65, e2y = 0.5,  e2tx = 0.65, e2ty = 0.5;
     let e2wanderTX = 0.65, e2wanderTY = 0.5, e2timer = 0;
+    let e2Drive = 'explore';
     const trail2 = [];
 
     const TRAIL_MAX = 28;
     const LERP = 0.018;
 
-    function newWander(entity) {
-      const x = 0.22 + Math.random() * 0.56;
-      const y = 0.22 + Math.random() * 0.50;
+    function newWander(entity, drive) {
+      const zone = ZONE_MAP[drive] || ZONE_MAP.explore;
+      const angle = Math.random() * Math.PI * 2;
+      const r = Math.random() * zone.r;
+      const x = Math.max(0.08, Math.min(0.92, zone.cx + Math.cos(angle) * r));
+      const y = Math.max(0.12, Math.min(0.90, zone.cy + Math.sin(angle) * r));
       if (entity === 1) { e1wanderTX = x; e1wanderTY = y; }
       else              { e2wanderTX = x; e2wanderTY = y; }
     }
 
     function updateTargets() {
       e1timer--;
-      if (e1timer <= 0) { newWander(1); e1timer = 90 + Math.floor(Math.random() * 100); }
+      if (e1timer <= 0) { newWander(1, e1Drive); e1timer = 90 + Math.floor(Math.random() * 100); }
       e1tx = e1wanderTX; e1ty = e1wanderTY;
 
       e2timer--;
-      if (e2timer <= 0) { newWander(2); e2timer = 90 + Math.floor(Math.random() * 100); }
+      if (e2timer <= 0) { newWander(2, e2Drive); e2timer = 90 + Math.floor(Math.random() * 100); }
       e2tx = e2wanderTX; e2ty = e2wanderTY;
+    }
+
+    function updateBars(d, idx) {
+      const s = idx === 1;
+      const eColor = s ? E1_COLOR : E2_COLOR;
+      const drive  = d.drive || 'explore';
+      const dc     = DRIVE_COLORS[drive] || '#444466';
+
+      const chip = document.getElementById('drive' + idx);
+      chip.textContent  = drive;
+      chip.style.color  = dc + 'aa';
+      chip.style.borderColor = dc + '44';
+
+      const setBar = (id, val, color) => {
+        const el = document.getElementById(id + idx);
+        if (el) { el.style.width = (val ?? 100) + '%'; el.style.background = color; }
+      };
+      setBar('bar-vit', d.vitality, eColor + 'bb');
+      setBar('bar-hun', d.hunger,   '#cc8844aa');
+      setBar('bar-slp', d.sleep,    '#4466aaaa');
+      setBar('bar-res', d.resource, '#aaaa44aa');
     }
 
     function resize() {
@@ -496,6 +642,17 @@
         if (d1.tick && d1.tick !== lastTick1) {
           lastTick1 = d1.tick;
           document.getElementById('h-tick').textContent = 'tick ' + String(d1.tick).padStart(4,'0');
+          if (d1.drive && d1.drive !== e1Drive) {
+            e1Drive = d1.drive; newWander(1, e1Drive); e1timer = 0;
+          }
+          updateBars(d1, 1);
+        }
+        if (d2.tick && d2.tick !== lastTick2) {
+          lastTick2 = d2.tick;
+          if (d2.drive && d2.drive !== e2Drive) {
+            e2Drive = d2.drive; newWander(2, e2Drive); e2timer = 0;
+          }
+          updateBars(d2, 2);
         }
       } catch(_) {}
     }
