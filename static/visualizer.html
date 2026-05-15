@@ -200,10 +200,6 @@
       <span class="drive-chip" id="drive1">—</span>
       <div class="bars-group">
         <div class="bar-col">
-          <span class="bar-label">vit <span class="bar-val" id="val-vit1">—</span></span>
-          <div class="bar-track"><div class="bar-fill" id="bar-vit1" style="background:#9090bb55"></div></div>
-        </div>
-        <div class="bar-col">
           <span class="bar-label">hun <span class="bar-val" id="val-hun1">—</span></span>
           <div class="bar-track"><div class="bar-fill" id="bar-hun1" style="background:#cc884455"></div></div>
         </div>
@@ -211,19 +207,11 @@
           <span class="bar-label">slp <span class="bar-val" id="val-slp1">—</span></span>
           <div class="bar-track"><div class="bar-fill" id="bar-slp1" style="background:#4466aa55"></div></div>
         </div>
-        <div class="bar-col">
-          <span class="bar-label">res <span class="bar-val" id="val-res1">—</span></span>
-          <div class="bar-track"><div class="bar-fill" id="bar-res1" style="background:#aaaa4455"></div></div>
-        </div>
       </div>
     </div>
     <div class="stats-half">
       <span class="drive-chip" id="drive2">—</span>
       <div class="bars-group">
-        <div class="bar-col">
-          <span class="bar-label">vit <span class="bar-val" id="val-vit2">—</span></span>
-          <div class="bar-track"><div class="bar-fill" id="bar-vit2" style="background:#70b88855"></div></div>
-        </div>
         <div class="bar-col">
           <span class="bar-label">hun <span class="bar-val" id="val-hun2">—</span></span>
           <div class="bar-track"><div class="bar-fill" id="bar-hun2" style="background:#cc884455"></div></div>
@@ -231,10 +219,6 @@
         <div class="bar-col">
           <span class="bar-label">slp <span class="bar-val" id="val-slp2">—</span></span>
           <div class="bar-track"><div class="bar-fill" id="bar-slp2" style="background:#4466aa55"></div></div>
-        </div>
-        <div class="bar-col">
-          <span class="bar-label">res <span class="bar-val" id="val-res2">—</span></span>
-          <div class="bar-track"><div class="bar-fill" id="bar-res2" style="background:#aaaa4455"></div></div>
         </div>
       </div>
     </div>
@@ -335,21 +319,22 @@
       e2tx = e2wanderTX; e2ty = e2wanderTY;
     }
 
-    // Per-second drain rates matching Python (per-tick rates / 3s tick interval)
+    // Drive-specific per-second drain rates (Python per-tick rates / 3.0s tick)
+    // Passive is added separately: sleep -0.033/s, hunger -0.017/s
+    // Net per-second rates (drive component + passive drain baked in)
     const DRAIN_PER_SEC = {
-      rest:    { hunger:  0.10, sleep: -0.40 },
-      explore: { hunger:  0.18, sleep:  0.18 },
-      decay:   { hunger:  0.13, sleep:  0.37 },
-      restore: { hunger:  0.37, sleep:  0.13 },
-      consume: { hunger: -0.40, sleep:  0.10 },
+      rest:    { hunger: -0.10, sleep: +0.89 },
+      explore: { hunger: -0.10, sleep: -1.11 },
+      decay:   { hunger: -0.10, sleep: -1.11 },
+      restore: { hunger: -0.10, sleep: -1.11 },
+      consume: { hunger: +0.73, sleep: -1.11 },
     };
 
     // Displayed bar values — drift smoothly, snap to server on tick
-    const dv1 = { vitality: 100, hunger: 55, sleep: 65, resource: 80 };
-    const dv2 = { vitality: 100, hunger: 55, sleep: 65, resource: 80 };
+    const dv1 = { hunger: 55, sleep: 65 };
+    const dv2 = { hunger: 55, sleep: 65 };
 
     function renderBars(dv, idx) {
-      const eColor = idx === 1 ? E1_COLOR : E2_COLOR;
       const clamp  = v => Math.max(0, Math.min(100, v));
       const setBar = (id, val, color) => {
         const el = document.getElementById(id + idx);
@@ -357,29 +342,17 @@
         const ve = document.getElementById('val-' + id.replace('bar-', '') + idx);
         if (ve) ve.textContent = Math.round(clamp(val));
       };
-      setBar('bar-vit', dv.vitality, eColor + 'bb');
-      setBar('bar-hun', dv.hunger,   '#cc8844aa');
-      setBar('bar-slp', dv.sleep,    '#4466aaaa');
-      setBar('bar-res', dv.resource, '#aaaa44aa');
+      setBar('bar-hun', dv.hunger, '#cc8844aa');
+      setBar('bar-slp', dv.sleep,  '#4466aaaa');
     }
 
     function applyDrain() {
-      const dt  = 0.1; // 100ms steps
-      const sky = getSky();
-      const resDelta = ['morning','noon','dusk'].includes(sky.label) ? -0.267 : 0.200;
-
+      const dt = 0.1;
       [{ dv: dv1, drive: e1Drive }, { dv: dv2, drive: e2Drive }].forEach(({ dv, drive }) => {
         const r = DRAIN_PER_SEC[drive] || DRAIN_PER_SEC.explore;
-        dv.hunger   = Math.max(0, Math.min(100, dv.hunger   + r.hunger * dt));
-        dv.sleep    = Math.max(0, Math.min(100, dv.sleep    + r.sleep  * dt));
-        dv.resource = Math.max(0, Math.min(100, dv.resource + resDelta * dt));
-        if (dv.hunger <= 5 || dv.sleep <= 5) {
-          dv.vitality = Math.max(0, dv.vitality - 0.033 * dt);
-        } else {
-          dv.vitality = Math.min(100, dv.vitality + 0.017 * dt);
-        }
+        dv.hunger = Math.max(0, Math.min(100, dv.hunger + r.hunger * dt));
+        dv.sleep  = Math.max(0, Math.min(100, dv.sleep  + r.sleep  * dt));
       });
-
       renderBars(dv1, 1);
       renderBars(dv2, 2);
     }
@@ -396,10 +369,8 @@
 
       // Snap display values to authoritative server values
       const dv = idx === 1 ? dv1 : dv2;
-      if (d.vitality != null) dv.vitality = d.vitality;
-      if (d.hunger   != null) dv.hunger   = d.hunger;
-      if (d.sleep    != null) dv.sleep    = d.sleep;
-      if (d.resource != null) dv.resource = d.resource;
+      if (d.hunger != null) dv.hunger = d.hunger;
+      if (d.sleep  != null) dv.sleep  = d.sleep;
     }
 
     function resize() {
