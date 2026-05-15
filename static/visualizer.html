@@ -321,14 +321,14 @@
 
     // Drive-specific per-second drain rates (Python per-tick rates / 3.0s tick)
     // Passive is added separately: sleep -0.033/s, hunger -0.017/s
-    // Net per-second rates (drive component + passive drain baked in)
-    const DRAIN_PER_SEC = {
-      rest:    { hunger: -0.10, sleep: +0.89 },
-      explore: { hunger: -0.10, sleep: -1.11 },
-      decay:   { hunger: -0.10, sleep: -1.11 },
-      restore: { hunger: -0.10, sleep: -1.11 },
-      consume: { hunger: +0.73, sleep: -1.11 },
+    // Per-second hunger rates (passive drain baked in)
+    const HUNGER_PER_SEC = {
+      rest: -0.33, explore: -0.33, decay: -0.33, restore: -0.33, consume: +0.50,
     };
+    // Sleep drain per second varies by time of day (day=fast, night=slow)
+    // rest drive adds +10/tick / 3s = +3.33/sec on top of passive
+    const SLEEP_PASSIVE = { day: -4.0 / 3.0, night: -0.3 / 3.0 };
+    const SLEEP_REST_BONUS = 10.0 / 3.0;
 
     // Displayed bar values — drift smoothly, snap to server on tick
     const dv1 = { hunger: 55, sleep: 65 };
@@ -347,11 +347,16 @@
     }
 
     function applyDrain() {
-      const dt = 0.1;
+      const dt  = 0.1;
+      const sky = getSky();
+      const isDay    = ['morning', 'noon', 'dusk'].includes(sky.label);
+      const sleepPassive = isDay ? SLEEP_PASSIVE.day : SLEEP_PASSIVE.night;
+
       [{ dv: dv1, drive: e1Drive }, { dv: dv2, drive: e2Drive }].forEach(({ dv, drive }) => {
-        const r = DRAIN_PER_SEC[drive] || DRAIN_PER_SEC.explore;
-        dv.hunger = Math.max(0, Math.min(100, dv.hunger + r.hunger * dt));
-        dv.sleep  = Math.max(0, Math.min(100, dv.sleep  + r.sleep  * dt));
+        const hRate = HUNGER_PER_SEC[drive] ?? -0.33;
+        const sRate = sleepPassive + (drive === 'rest' ? SLEEP_REST_BONUS : 0);
+        dv.hunger = Math.max(0, Math.min(100, dv.hunger + hRate * dt));
+        dv.sleep  = Math.max(0, Math.min(100, dv.sleep  + sRate * dt));
       });
       renderBars(dv1, 1);
       renderBars(dv2, 2);
