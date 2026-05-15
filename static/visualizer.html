@@ -288,12 +288,14 @@
     let e1x = 0.35, e1y = 0.5,  e1tx = 0.35, e1ty = 0.5;
     let e1wanderTX = 0.35, e1wanderTY = 0.5, e1timer = 0;
     let e1Drive = 'explore';
+    let e1TimeOfDay = 'dawn';
     const trail1 = [];
 
     // Entity 2 state
     let e2x = 0.65, e2y = 0.5,  e2tx = 0.65, e2ty = 0.5;
     let e2wanderTX = 0.65, e2wanderTY = 0.5, e2timer = 0;
     let e2Drive = 'explore';
+    let e2TimeOfDay = 'dawn';
     const trail2 = [];
 
     const TRAIL_MAX = 28;
@@ -346,15 +348,16 @@
       setBar('bar-slp', dv.sleep,  '#4466aaaa');
     }
 
+    const DAY_PHASES = ['morning', 'noon', 'dusk'];
     function applyDrain() {
-      const dt  = 0.1;
-      const sky = getSky();
-      const isDay    = ['morning', 'noon', 'dusk'].includes(sky.label);
-      const sleepPassive = isDay ? SLEEP_PASSIVE.day : SLEEP_PASSIVE.night;
-
-      [{ dv: dv1, drive: e1Drive }, { dv: dv2, drive: e2Drive }].forEach(({ dv, drive }) => {
+      const dt = 0.1;
+      [
+        { dv: dv1, drive: e1Drive, tod: e1TimeOfDay },
+        { dv: dv2, drive: e2Drive, tod: e2TimeOfDay },
+      ].forEach(({ dv, drive, tod }) => {
         const hRate = HUNGER_PER_SEC[drive] ?? -0.33;
-        const sRate = sleepPassive + (drive === 'rest' ? SLEEP_REST_BONUS : 0);
+        const passive = DAY_PHASES.includes(tod) ? SLEEP_PASSIVE.day : SLEEP_PASSIVE.night;
+        const sRate = passive + (drive === 'rest' ? SLEEP_REST_BONUS : 0);
         dv.hunger = Math.max(0, Math.min(100, dv.hunger + hRate * dt));
         dv.sleep  = Math.max(0, Math.min(100, dv.sleep  + sRate * dt));
       });
@@ -372,10 +375,11 @@
       chip.style.color       = dc + 'aa';
       chip.style.borderColor = dc + '44';
 
-      // Snap display values to authoritative server values
+      // Snap display values and time-of-day to authoritative server values
       const dv = idx === 1 ? dv1 : dv2;
-      if (d.hunger != null) dv.hunger = d.hunger;
-      if (d.sleep  != null) dv.sleep  = d.sleep;
+      if (d.hunger      != null) dv.hunger = d.hunger;
+      if (d.sleep       != null) dv.sleep  = d.sleep;
+      if (d.time_of_day != null) { if (idx === 1) e1TimeOfDay = d.time_of_day; else e2TimeOfDay = d.time_of_day; }
     }
 
     function resize() {
