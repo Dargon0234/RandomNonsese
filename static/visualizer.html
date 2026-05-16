@@ -98,6 +98,7 @@
       height: 100%;
       border-radius: 2px;
       width: 100%;
+      transition: width 1.5s ease;
     }
 
     /* Speech between entities */
@@ -323,14 +324,6 @@
 
     // Drive-specific per-second drain rates (Python per-tick rates / 3.0s tick)
     // Passive is added separately: sleep -0.033/s, hunger -0.017/s
-    // Per-second hunger rates (passive drain baked in)
-    const HUNGER_PER_SEC = {
-      rest: -0.33, explore: -0.33, decay: -0.33, restore: -0.33, consume: +0.50,
-    };
-    // Sleep drain per second varies by time of day (day=fast, night=slow)
-    // rest drive adds +10/tick / 3s = +3.33/sec on top of passive
-    const SLEEP_PASSIVE = { day: -0.8 / 3.0, night: -0.3 / 3.0 };
-    const SLEEP_REST_BONUS = 10.0 / 3.0;
 
     // Displayed bar values — drift smoothly, snap to server on tick
     const dv1 = { hunger: 55, sleep: 65 };
@@ -348,24 +341,7 @@
       setBar('bar-slp', dv.sleep,  '#4466aaaa');
     }
 
-    const DAY_PHASES = ['morning', 'noon', 'dusk'];
-    function applyDrain() {
-      const dt = 0.1;
-      [
-        { dv: dv1, drive: e1Drive, tod: e1TimeOfDay },
-        { dv: dv2, drive: e2Drive, tod: e2TimeOfDay },
-      ].forEach(({ dv, drive, tod }) => {
-        const hRate = HUNGER_PER_SEC[drive] ?? -0.33;
-        const passive = DAY_PHASES.includes(tod) ? SLEEP_PASSIVE.day : SLEEP_PASSIVE.night;
-        const sRate = passive + (drive === 'rest' ? SLEEP_REST_BONUS : 0);
-        dv.hunger = Math.max(0, Math.min(100, dv.hunger + hRate * dt));
-        dv.sleep  = Math.max(0, Math.min(100, dv.sleep  + sRate * dt));
-      });
-      renderBars(dv1, 1);
-      renderBars(dv2, 2);
-    }
-
-    setInterval(applyDrain, 100);
+    // Bars update directly from server ticks — no client-side prediction
 
     function updateBars(d, idx) {
       const drive = d.drive || 'explore';
@@ -375,11 +351,11 @@
       chip.style.color       = dc + 'aa';
       chip.style.borderColor = dc + '44';
 
-      // Snap display values and time-of-day to authoritative server values
       const dv = idx === 1 ? dv1 : dv2;
       if (d.hunger      != null) dv.hunger = d.hunger;
       if (d.sleep       != null) dv.sleep  = d.sleep;
       if (d.time_of_day != null) { if (idx === 1) e1TimeOfDay = d.time_of_day; else e2TimeOfDay = d.time_of_day; }
+      renderBars(dv, idx);
     }
 
     function resize() {
