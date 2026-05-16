@@ -78,12 +78,12 @@
     .bar-label {
       font-size: 0.38rem;
       letter-spacing: 0.07em;
-      color: #3a3a55;
+      color: #7777aa;
       text-transform: uppercase;
     }
     .bar-val {
       font-size: 0.38rem;
-      color: #3a3a55;
+      color: #7777aa;
       min-width: 1.8em;
       text-align: right;
     }
@@ -106,7 +106,7 @@
       padding: 0.4rem 1.2rem;
       border-top: 1px solid #0f0f1c;
       font-size: 0.65rem;
-      color: #1e1e2e;
+      color: #aaaacc;
       min-height: 1.8rem;
       flex-shrink: 0;
       letter-spacing: 0.06em;
@@ -114,7 +114,7 @@
       gap: 0.5rem;
       align-items: center;
     }
-    #speech-label { color: #252535; font-size: 0.52rem; flex-shrink: 0; }
+    #speech-label { color: #666688; font-size: 0.52rem; flex-shrink: 0; }
     #speech-text  { font-style: italic; transition: color 1.5s ease; }
 
     /* Ask row — side by side */
@@ -128,7 +128,7 @@
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      padding: 0.45rem 1.2rem;
+      padding: 0.65rem 1.2rem;
       border-right: 1px solid #0f0f1c;
     }
     .ask-half:last-child { border-right: none; }
@@ -142,14 +142,14 @@
       background: #0d0d18;
       border: 1px solid #1a1a2a;
       border-radius: 3px;
-      color: #666;
+      color: #aaa;
       font-family: 'Courier New', monospace;
       font-size: 0.68rem;
       padding: 0.3rem 0.6rem;
       outline: none;
       transition: border-color 0.3s ease, color 0.3s ease;
     }
-    .ask-input:focus { border-color: #2a2a44; color: #999; }
+    .ask-input:focus { border-color: #3a3a66; color: #ddd; }
     .ask-btn {
       background: none;
       border: 1px solid #1a1a2a;
@@ -171,15 +171,15 @@
     }
     .reply-half {
       flex: 1;
-      padding: 0.4rem 1.2rem;
+      padding: 0.6rem 1.2rem;
       font-size: 0.68rem;
-      color: #1e1e2e;
-      min-height: 1.8rem;
-      line-height: 1.5;
+      color: #aaaacc;
+      min-height: 2.8rem;
+      line-height: 1.6;
       border-right: 1px solid #0a0a14;
     }
     .reply-half:last-child { border-right: none; }
-    .reply-q { color: #1e1e2e; margin-right: 0.5rem; }
+    .reply-q { color: #666688; margin-right: 0.5rem; }
     .reply-a { font-style: italic; }
   </style>
 </head>
@@ -589,7 +589,7 @@
         else line = (line + ' ' + w).trim();
       }
       if (line) lines.push(line);
-      ctx.globalAlpha = state.alpha * 0.75;
+      ctx.globalAlpha = state.alpha * 0.95;
       ctx.font = "11px 'Courier New'";
       ctx.textAlign = 'center';
       ctx.fillStyle = col;
