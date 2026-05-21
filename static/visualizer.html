@@ -201,8 +201,8 @@
       <span class="drive-chip" id="drive1">—</span>
       <div class="bars-group">
         <div class="bar-col">
-          <span class="bar-label">hun <span class="bar-val" id="val-hun1">—</span></span>
-          <div class="bar-track"><div class="bar-fill" id="bar-hun1" style="background:#cc884455"></div></div>
+          <span class="bar-label">food <span class="bar-val" id="val-food1">—</span></span>
+          <div class="bar-track"><div class="bar-fill" id="bar-food1" style="background:#cc884455"></div></div>
         </div>
         <div class="bar-col">
           <span class="bar-label">slp <span class="bar-val" id="val-slp1">—</span></span>
@@ -214,8 +214,8 @@
       <span class="drive-chip" id="drive2">—</span>
       <div class="bars-group">
         <div class="bar-col">
-          <span class="bar-label">hun <span class="bar-val" id="val-hun2">—</span></span>
-          <div class="bar-track"><div class="bar-fill" id="bar-hun2" style="background:#cc884455"></div></div>
+          <span class="bar-label">food <span class="bar-val" id="val-food2">—</span></span>
+          <div class="bar-track"><div class="bar-fill" id="bar-food2" style="background:#cc884455"></div></div>
         </div>
         <div class="bar-col">
           <span class="bar-label">slp <span class="bar-val" id="val-slp2">—</span></span>
@@ -323,11 +323,11 @@
     }
 
     // Drive-specific per-second drain rates (Python per-tick rates / 3.0s tick)
-    // Passive is added separately: sleep -0.033/s, hunger -0.017/s
+    // Passive is added separately: sleep -0.033/s, food -0.017/s
 
     // Displayed bar values — drift smoothly, snap to server on tick
-    const dv1 = { hunger: 55, sleep: 65 };
-    const dv2 = { hunger: 55, sleep: 65 };
+    const dv1 = { food: 55, sleep: 65 };
+    const dv2 = { food: 55, sleep: 65 };
 
     function renderBars(dv, idx) {
       const clamp  = v => Math.max(0, Math.min(100, v));
@@ -337,7 +337,7 @@
         const ve = document.getElementById('val-' + id.replace('bar-', '') + idx);
         if (ve) ve.textContent = Math.round(clamp(val));
       };
-      setBar('bar-hun', dv.hunger, '#cc8844aa');
+      setBar('bar-food', dv.food, '#cc8844aa');
       setBar('bar-slp', dv.sleep,  '#4466aaaa');
     }
 
@@ -352,7 +352,7 @@
       chip.style.borderColor = dc + '44';
 
       const dv = idx === 1 ? dv1 : dv2;
-      if (d.hunger      != null) dv.hunger = d.hunger;
+      if (d.food      != null) dv.food = d.food;
       if (d.sleep       != null) dv.sleep  = d.sleep;
       if (d.time_of_day != null) { if (idx === 1) e1TimeOfDay = d.time_of_day; else e2TimeOfDay = d.time_of_day; }
       renderBars(dv, idx);
