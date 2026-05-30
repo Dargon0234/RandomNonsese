@@ -24,6 +24,7 @@ speech_latest    = {
     "from_1": {"tick": 0, "text": ""},
     "from_2": {"tick": 0, "text": ""},
 }
+speech_log       = []
 
 
 @app.post("/output")
@@ -178,11 +179,23 @@ async def receive_speech(request: Request):
     data = json.loads(body)
     key  = f"from_{data.get('from', 0)}"
     speech_latest[key] = {"tick": data.get("tick", 0), "text": data.get("text", "")}
+    speech_log.append({
+        "from": data.get("from", 0),
+        "text": data.get("text", ""),
+        "tick": data.get("tick", 0),
+        "ts":   datetime.now(timezone.utc).isoformat(),
+    })
+    if len(speech_log) > 30:
+        speech_log.pop(0)
     return {"status": "ok"}
 
 @app.get("/speech")
 async def get_speech():
     return JSONResponse(speech_latest)
+
+@app.get("/speech_log")
+async def get_speech_log():
+    return JSONResponse(speech_log)
 
 
 # ── Static pages ─────────────────────────────────────────────────

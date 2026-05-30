@@ -101,21 +101,74 @@
       transition: width 1.5s ease;
     }
 
-    /* Speech between entities */
-    #speech-bar {
-      padding: 0.4rem 1.2rem;
-      border-top: 1px solid #0f0f1c;
-      font-size: 0.65rem;
-      color: #aaaacc;
-      min-height: 1.8rem;
-      flex-shrink: 0;
-      letter-spacing: 0.06em;
+    /* Thought strip */
+    #thought-row {
       display: flex;
-      gap: 0.5rem;
-      align-items: center;
+      border-top: 1px solid #0f0f1c;
+      flex-shrink: 0;
     }
-    #speech-label { color: #666688; font-size: 0.52rem; flex-shrink: 0; }
-    #speech-text  { font-style: italic; transition: color 1.5s ease; }
+    .thought-half {
+      flex: 1;
+      padding: 0.45rem 1.2rem;
+      border-right: 1px solid #0f0f1c;
+      min-height: 2.4rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+    .thought-half:last-child { border-right: none; }
+    .thought-tag {
+      font-size: 0.42rem;
+      letter-spacing: 0.1em;
+      color: #444466;
+      flex-shrink: 0;
+      padding-top: 2px;
+    }
+    .thought-text {
+      font-size: 0.62rem;
+      font-style: italic;
+      line-height: 1.5;
+      color: #555577;
+      transition: color 2s ease;
+    }
+
+    /* Conversation log */
+    #convo-log {
+      border-top: 1px solid #0f0f1c;
+      flex-shrink: 0;
+      max-height: 9rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column-reverse;
+      padding: 0.3rem 0;
+    }
+    #convo-log::-webkit-scrollbar { width: 3px; }
+    #convo-log::-webkit-scrollbar-track { background: transparent; }
+    #convo-log::-webkit-scrollbar-thumb { background: #1a1a2e; border-radius: 2px; }
+    .convo-line {
+      display: flex;
+      gap: 0.6rem;
+      align-items: baseline;
+      padding: 0.18rem 1.2rem;
+    }
+    .convo-who {
+      font-size: 0.44rem;
+      letter-spacing: 0.1em;
+      flex-shrink: 0;
+      width: 3rem;
+      text-align: right;
+    }
+    .convo-arrow {
+      font-size: 0.44rem;
+      color: #2a2a3e;
+      flex-shrink: 0;
+    }
+    .convo-msg {
+      font-size: 0.62rem;
+      font-style: italic;
+      line-height: 1.5;
+      color: #4a4a66;
+    }
 
     /* Ask row — side by side */
     #ask-row {
@@ -225,10 +278,18 @@
     </div>
   </div>
 
-  <div id="speech-bar">
-    <span id="speech-label">—</span>
-    <span id="speech-text"></span>
+  <div id="thought-row">
+    <div class="thought-half">
+      <span class="thought-tag" style="color:#9090bb44">· thought</span>
+      <span class="thought-text" id="thought-display-1" style="color:#9090bb44"></span>
+    </div>
+    <div class="thought-half">
+      <span class="thought-tag" style="color:#70b88844">· thought</span>
+      <span class="thought-text" id="thought-display-2" style="color:#70b88844"></span>
+    </div>
   </div>
+
+  <div id="convo-log"></div>
 
   <div id="ask-row">
     <div class="ask-half">
@@ -673,33 +734,44 @@
       try {
         const [r1, r2] = await Promise.all([fetch('/thought'), fetch('/thought2')]);
         const [d1, d2] = await Promise.all([r1.json(), r2.json()]);
-        if (d1.tick && d1.tick !== thoughtTick1 && d1.text) { thoughtTick1 = d1.tick; triggerThought(t1, d1.text, d1.tick); }
-        if (d2.tick && d2.tick !== thoughtTick2 && d2.text) { thoughtTick2 = d2.tick; triggerThought(t2, d2.text, d2.tick); }
+        if (d1.tick && d1.tick !== thoughtTick1 && d1.text) {
+          thoughtTick1 = d1.tick;
+          triggerThought(t1, d1.text, d1.tick);
+          const el = document.getElementById('thought-display-1');
+          if (el) { el.textContent = d1.text; el.style.color = E1_COLOR + 'bb'; }
+        }
+        if (d2.tick && d2.tick !== thoughtTick2 && d2.text) {
+          thoughtTick2 = d2.tick;
+          triggerThought(t2, d2.text, d2.tick);
+          const el = document.getElementById('thought-display-2');
+          if (el) { el.textContent = d2.text; el.style.color = E2_COLOR + 'bb'; }
+        }
       } catch(_) {}
     }
 
-    let lastSpeechTick1 = -1, lastSpeechTick2 = -1;
-    async function pollSpeech() {
+    let convoLogLen = 0;
+    async function pollConvo() {
       try {
-        const res  = await fetch('/speech');
+        const res  = await fetch('/speech_log');
         const data = await res.json();
-        const s1 = data.from_1 || {}, s2 = data.from_2 || {};
-
-        const labelEl = document.getElementById('speech-label');
-        const textEl  = document.getElementById('speech-text');
-
-        if (s1.tick && s1.tick !== lastSpeechTick1 && s1.text) {
-          lastSpeechTick1 = s1.tick;
-          labelEl.textContent = '1 → 2';
-          labelEl.style.color = E1_COLOR + '88';
-          textEl.textContent  = '"' + s1.text + '"';
-          textEl.style.color  = E1_COLOR + '99';
-        } else if (s2.tick && s2.tick !== lastSpeechTick2 && s2.text) {
-          lastSpeechTick2 = s2.tick;
-          labelEl.textContent = '2 → 1';
-          labelEl.style.color = E2_COLOR + '88';
-          textEl.textContent  = '"' + s2.text + '"';
-          textEl.style.color  = E2_COLOR + '99';
+        if (!Array.isArray(data) || data.length === convoLogLen) return;
+        convoLogLen = data.length;
+        const log = document.getElementById('convo-log');
+        if (!log) return;
+        log.innerHTML = '';
+        // render newest first (column-reverse shows newest at bottom)
+        for (const entry of data) {
+          const isE1  = entry.from === 1;
+          const col   = isE1 ? E1_COLOR : E2_COLOR;
+          const label = isE1 ? '1' : '2';
+          const arrow = isE1 ? '→ 2' : '→ 1';
+          const line  = document.createElement('div');
+          line.className = 'convo-line';
+          line.innerHTML =
+            `<span class="convo-who" style="color:${col}66">${label}</span>` +
+            `<span class="convo-arrow" style="color:${col}33">${arrow}</span>` +
+            `<span class="convo-msg" style="color:${col}99">"${entry.text}"</span>`;
+          log.appendChild(line);
         }
       } catch(_) {}
     }
@@ -759,7 +831,7 @@
     // ── Start polling ────────────────────────────────────────────
     poll();           setInterval(poll,          2000);
     pollThoughts();   setInterval(pollThoughts,  2000);
-    pollSpeech();     setInterval(pollSpeech,    2000);
+    pollConvo();      setInterval(pollConvo,     2000);
     pollResponses();  setInterval(pollResponses, 2000);
   </script>
 </body>
