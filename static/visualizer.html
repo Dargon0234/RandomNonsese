@@ -201,12 +201,12 @@
       <span class="drive-chip" id="drive1">—</span>
       <div class="bars-group">
         <div class="bar-col">
-          <span class="bar-label">food <span class="bar-val" id="val-food1">—</span></span>
-          <div class="bar-track"><div class="bar-fill" id="bar-food1" style="background:#cc884455"></div></div>
-        </div>
-        <div class="bar-col">
           <span class="bar-label">slp <span class="bar-val" id="val-slp1">—</span></span>
           <div class="bar-track"><div class="bar-fill" id="bar-slp1" style="background:#4466aa55"></div></div>
+        </div>
+        <div class="bar-col">
+          <span class="bar-label">known <span class="bar-val" id="val-known1">0</span></span>
+          <div class="bar-track"><div class="bar-fill" id="bar-known1" style="background:#c8a8e955;width:0%"></div></div>
         </div>
       </div>
     </div>
@@ -214,12 +214,12 @@
       <span class="drive-chip" id="drive2">—</span>
       <div class="bars-group">
         <div class="bar-col">
-          <span class="bar-label">food <span class="bar-val" id="val-food2">—</span></span>
-          <div class="bar-track"><div class="bar-fill" id="bar-food2" style="background:#cc884455"></div></div>
-        </div>
-        <div class="bar-col">
           <span class="bar-label">slp <span class="bar-val" id="val-slp2">—</span></span>
           <div class="bar-track"><div class="bar-fill" id="bar-slp2" style="background:#4466aa55"></div></div>
+        </div>
+        <div class="bar-col">
+          <span class="bar-label">known <span class="bar-val" id="val-known2">0</span></span>
+          <div class="bar-track"><div class="bar-fill" id="bar-known2" style="background:#c8a8e955;width:0%"></div></div>
         </div>
       </div>
     </div>
@@ -265,7 +265,7 @@
       explore: '#44bbaa',
       decay:   '#aa4466',
       restore: '#9c8fd4',
-      consume: '#81c784',
+      learn:   '#c8a8e9',
     };
 
     // Room furniture positions (normalized)
@@ -273,7 +273,7 @@
       rest:    { nx: 0.14, ny: 0.60 },
       decay:   { nx: 0.72, ny: 0.78 },
       restore: { nx: 0.25, ny: 0.28 },
-      consume: { nx: 0.82, ny: 0.30 },
+      learn:   { nx: 0.82, ny: 0.30 },
     };
 
     // Drive wander zones (center + radius in normalized coords)
@@ -282,7 +282,7 @@
       explore: { cx: 0.50, cy: 0.50, r: 0.20 },
       decay:   { cx: 0.72, cy: 0.78, r: 0.11 },
       restore: { cx: 0.25, cy: 0.28, r: 0.10 },
-      consume: { cx: 0.82, cy: 0.30, r: 0.11 },
+      learn:   { cx: 0.82, cy: 0.30, r: 0.11 },
     };
 
     // Entity 1 state
@@ -325,23 +325,21 @@
     // Drive-specific per-second drain rates (Python per-tick rates / 3.0s tick)
     // Passive is added separately: sleep -0.033/s, food -0.017/s
 
-    // Displayed bar values — drift smoothly, snap to server on tick
-    const dv1 = { food: 55, sleep: 65 };
-    const dv2 = { food: 55, sleep: 65 };
+    const dv1 = { sleep: 65, knowledge: 0 };
+    const dv2 = { sleep: 65, knowledge: 0 };
 
     function renderBars(dv, idx) {
-      const clamp  = v => Math.max(0, Math.min(100, v));
-      const setBar = (id, val, color) => {
-        const el = document.getElementById(id + idx);
-        if (el) { el.style.width = clamp(val) + '%'; el.style.background = color; }
-        const ve = document.getElementById('val-' + id.replace('bar-', '') + idx);
-        if (ve) ve.textContent = Math.round(clamp(val));
-      };
-      setBar('bar-food', dv.food, '#cc8844aa');
-      setBar('bar-slp', dv.sleep,  '#4466aaaa');
-    }
+      const clamp = v => Math.max(0, Math.min(100, v));
+      const slpEl = document.getElementById('bar-slp' + idx);
+      const slpVl = document.getElementById('val-slp' + idx);
+      if (slpEl) slpEl.style.width = clamp(dv.sleep) + '%';
+      if (slpVl) slpVl.textContent = Math.round(clamp(dv.sleep));
 
-    // Bars update directly from server ticks — no client-side prediction
+      const knEl = document.getElementById('bar-known' + idx);
+      const knVl = document.getElementById('val-known' + idx);
+      if (knEl) knEl.style.width = Math.min(100, dv.knowledge * 2) + '%';
+      if (knVl) knVl.textContent = dv.knowledge;
+    }
 
     function updateBars(d, idx) {
       const drive = d.drive || 'explore';
@@ -352,8 +350,8 @@
       chip.style.borderColor = dc + '44';
 
       const dv = idx === 1 ? dv1 : dv2;
-      if (d.food      != null) dv.food = d.food;
-      if (d.sleep       != null) dv.sleep  = d.sleep;
+      if (d.sleep     != null) dv.sleep     = d.sleep;
+      if (d.knowledge != null) dv.knowledge = d.knowledge;
       if (d.time_of_day != null) { if (idx === 1) e1TimeOfDay = d.time_of_day; else e2TimeOfDay = d.time_of_day; }
       renderBars(dv, idx);
     }
@@ -398,20 +396,26 @@
       ctx.stroke();
     }
 
-    function drawShelf() {
+    function drawScreen() {
       const W = canvas.width, H = canvas.height;
-      const cx = ZONES.consume.nx * W, cy = ZONES.consume.ny * H;
-      const sw = W * 0.09, sh = H * 0.03;
-      for (let i = 0; i < 3; i++) {
-        const y = cy - sh*3 + i * (sh + H*0.05);
-        ctx.fillStyle = '#81c78416'; ctx.strokeStyle = '#81c78428'; ctx.lineWidth = 1;
-        roundRect(cx - sw/2, y, sw, sh, 1);
-        const ic = 2 + i;
-        for (let j = 0; j < ic; j++) {
-          const ix = cx - sw/2 + sw * (0.1 + j * (0.8 / ic));
-          ctx.fillStyle = '#81c78422'; ctx.fillRect(ix, y - H*0.025, sw*0.12, H*0.025);
-        }
+      const cx = ZONES.learn.nx * W, cy = ZONES.learn.ny * H;
+      const sw = W * 0.09, sh = H * 0.10;
+      const pulse = 0.6 + 0.4 * Math.sin(Date.now() / 1800);
+      const alpha = Math.floor(pulse * 0x22).toString(16).padStart(2,'0');
+      ctx.fillStyle = '#c8a8e9' + alpha;
+      ctx.strokeStyle = '#c8a8e930';
+      ctx.lineWidth = 1;
+      roundRect(cx - sw/2, cy - sh/2, sw, sh, 3);
+      // scanlines
+      for (let i = 0; i < 5; i++) {
+        const y = cy - sh/2 + (sh / 6) * (i + 1);
+        ctx.beginPath(); ctx.moveTo(cx - sw/2 + 4, y); ctx.lineTo(cx + sw/2 - 4, y);
+        ctx.strokeStyle = '#c8a8e918'; ctx.stroke();
       }
+      const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, sw * 0.9);
+      grd.addColorStop(0, `rgba(200,168,233,${pulse * 0.06})`);
+      grd.addColorStop(1, 'rgba(200,168,233,0)');
+      ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(cx, cy, sw * 0.9, 0, Math.PI*2); ctx.fill();
     }
 
     function drawDecayCorner() {
@@ -616,7 +620,7 @@
       drawRoom();
       drawAmbientOverlay(sky);
       drawWindowWithSky(sky);
-      drawBed(); drawShelf(); drawDecayCorner(); drawRestorePool();
+      drawBed(); drawScreen(); drawDecayCorner(); drawRestorePool();
 
       const timeEl = document.getElementById('h-time');
       if (timeEl && timeEl.textContent !== sky.label) {
